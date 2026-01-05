@@ -1,0 +1,14 @@
+
+steps:
+  - name: 'ghcr.io/astral-sh/uv:debian'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make install
+        make lint-codespell
+    dir: 'app-mod-agent'
+    id: 'codespell-check'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
