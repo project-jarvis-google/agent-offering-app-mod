@@ -1,0 +1,35 @@
+steps:
+  - name: 'ghcr.io/astral-sh/uv:debian'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make install
+        make lint-codespell
+    dir: 'app-mod-agent'
+    id: 'codespell-check'
+
+  - name: 'node'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make lint-frontend
+    dir: 'app-mod-agent'
+    id: 'frontend-lint-check'
+    waitFor: ['-']
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        [[ "$BRANCH_NAME" == "main" ]] && make -C ../.. frontend-deploy-new || echo "Skipping deployment on non-main branch" && exit 0
+    dir: 'app-mod-agent/frontend/vite-project'
+    id: 'deploy-frontend'
+    waitFor:
+      - codespell-check
+      - frontend-lint-check
+
+options:
+  logging: CLOUD_LOGGING_ONLY

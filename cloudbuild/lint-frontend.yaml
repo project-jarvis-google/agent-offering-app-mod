@@ -1,0 +1,14 @@
+steps:
+
+  - name: 'node'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make lint-frontend
+    dir: 'app-mod-agent'
+    id: 'frontend-lint-check'
+    waitFor: ['-']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
