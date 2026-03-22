@@ -209,3 +209,4 @@ app-mod-agent/frontend/package-lock.json
 
 #ADK Temp Files
 .adk/
+.DS_Store
