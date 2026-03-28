@@ -66,8 +66,7 @@ async def perform_context_analysis(tool_context: ToolContext) -> bool:
     except Exception as e:
         logging.warning("Failed to run @specfy/stack-analyser due to exception: %s", e)
 
-    full_codebase_text = tool_context.state.get("full_codebase_text")
-    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt, full_codebase_text)
+    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
     
     tool_context.state["context_analysis_result"] = result
     return True

@@ -53,8 +53,7 @@ async def perform_dependency_analysis(tool_context: ToolContext) -> bool:
         logging.warning("Failed to run syft due to exception: %s", e)
 
 
-    full_codebase_text = tool_context.state.get("full_codebase_text")
-    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt, full_codebase_text)
+    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
 
     
     tool_context.state["dependency_analysis_result"] = result

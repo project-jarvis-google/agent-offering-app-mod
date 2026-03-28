@@ -32,8 +32,7 @@ async def perform_cloud_strategy_analysis(tool_context: ToolContext) -> bool:
 
     Format the output elegantly in Markdown with clear columns or headers.
     """
-    full_codebase_text = tool_context.state.get("full_codebase_text")
-    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt, full_codebase_text)
+    result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
 
     
     tool_context.state["cloud_strategy_analysis_result"] = result
