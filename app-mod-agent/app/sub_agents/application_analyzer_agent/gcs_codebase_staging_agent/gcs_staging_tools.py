@@ -53,10 +53,7 @@ async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolCont
             logging.info("Extraction complete.")
             sourceCodeStored = True
             
-            # Cache codebase text for downstream agents
-            from ..utils.gemini_utils import load_codebase_text
-            full_codebase_text = await load_codebase_text(secure_temp_repo_dir)
-            tool_context.state["full_codebase_text"] = full_codebase_text
+
             
             tool_context.state["secure_temp_repo_dir"] = secure_temp_repo_dir
             return sourceCodeStored
@@ -77,10 +74,7 @@ async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolCont
 
 
         sourceCodeStored = True
-        # Cache codebase text for downstream agents
-        from ..utils.gemini_utils import load_codebase_text
-        full_codebase_text = await load_codebase_text(secure_temp_repo_dir)
-        tool_context.state["full_codebase_text"] = full_codebase_text
+
         tool_context.state["secure_temp_repo_dir"] = secure_temp_repo_dir
 
     except Exception as e:
