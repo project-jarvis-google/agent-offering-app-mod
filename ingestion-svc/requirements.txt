@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+requests
+google-cloud-storage
+pydantic
+pytest
+httpx
+sqlalchemy
+asyncpg
+sse-starlette
+python-dotenv
+aiosqlite
