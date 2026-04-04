@@ -10,7 +10,7 @@ install:
 	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Installing uv..."; curl -LsSf https://astral.sh/uv/$(UV_VERSION)/install.sh | sh; }
 	@command -v npm >/dev/null 2>&1 || { echo "npm is not installed. Installing nvm and Node.js v$(NODE_VERSION)..."; curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/$(NVM_VERSION)/install.sh | bash; export NVM_DIR="$$HOME/.nvm"; [ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; nvm install $(NODE_VERSION); nvm use $(NODE_VERSION); }
 
-	uv sync --dev --extra jupyter --extra lint && npm --prefix frontend/vite-project install
+	UV_DEFAULT_INDEX="https://pypi.org/simple" uv sync --dev --extra jupyter --extra lint && npm --prefix frontend/vite-project install
 
 # Start the ADK API server and React frontend development server simultaneously
 dev:
@@ -42,7 +42,7 @@ backend-deploy:
 	gcloud run deploy app-mod-agent-backend \
 		--source . \
 		--env-vars-file=./.env.prod.yaml \
-		--update-secrets=GEMINI_API_KEY=app-mod-agent-GEMINI_API_KEY:latest \
+		--update-secrets=GEMINI_API_KEY=app-mod-agent-GEMINI-API-KEY:latest \
 		--memory "4Gi" \
 		--project $$PROJECT_ID \
 		--region "us-central1" \
