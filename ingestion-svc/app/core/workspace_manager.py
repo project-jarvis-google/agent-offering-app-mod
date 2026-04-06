@@ -48,7 +48,7 @@ class WorkspaceManager:
         #     except Exception as e:
         #         logger.warning(f"Error checking GCS credentials for email: {e}")
 
-    def _get_workspace_path(self, workspace_id: str) -> str:
+    def get_workspace_path(self, workspace_id: str) -> str:
         if self.use_gcs:
             return f"gs://{self.bucket_name}/workspaces/{workspace_id}"
 
@@ -57,7 +57,7 @@ class WorkspaceManager:
                          opportunity_link: str = None, deal_value: str = None) -> WorkspaceSchema:
         """Creates a new workspace entry in DB."""
         workspace_id = f"ws-{uuid.uuid4().hex[:8]}"
-        base_path = self._get_workspace_path(workspace_id)
+        base_path = self.get_workspace_path(workspace_id)
 
         # In GCS, directories are virtual, so we don't need os.makedirs.
         # We just create the DB record. The IngestionService will create the blobs.
