@@ -37,6 +37,11 @@ class IngestRequest(BaseModel):
     token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
     codebase_name: str = Field(..., description="Name of the application/service")
 
+class IngestResponse(BaseModel):
+    ws_id: str = Field(..., description="The Workspace ID of triggering ingestion request")
+    status: str = Field(..., description="The current status of code ingestion")
+    message: str = Field(..., description="Message indicating the status of code ingestion")
+
 class SourceResponse(BaseModel):
     id: str
     workspace_id: str

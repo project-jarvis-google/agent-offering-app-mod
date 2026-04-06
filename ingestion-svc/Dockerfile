@@ -5,14 +5,17 @@ FROM python:3.12-slim
 # Allow statements and log messages to immediately appear in the Knative logs
 ENV PYTHONUNBUFFERED True
 
+# Copy the uv binary from the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # Set the working directory to /app
 WORKDIR /app
 
 # Copy local code to the container image.
-COPY uv.lock ./
+COPY requirements.txt ./
 
 # Install user dependencies.
-RUN uv sync --frozen --no-dev
+RUN uv pip install --system --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
