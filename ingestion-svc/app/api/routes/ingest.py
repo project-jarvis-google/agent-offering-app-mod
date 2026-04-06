@@ -12,7 +12,7 @@ from sqlalchemy import func
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.workspace_manager import WorkspaceManager
-from app.models.schemas import SourceResponse, IngestRequest,  CreateWorkspaceRequest, WorkspaceSchema
+from app.models.schemas import SourceResponse, IngestRequest, IngestResponse, CreateWorkspaceRequest, WorkspaceSchema
 from app.models.domain import IngestionSource, WorkspaceModel, IngestionStatus
 from app.core.database import get_db, AsyncSessionLocal
 from app.utils.parsers import parse_github_url, parse_gcs_url
@@ -74,7 +74,7 @@ async def background_ingestion_task(
         logger.info(f"Cleaning up temporary directory: {temp_dir}")
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-@router.post("/ingest/sourcecode", response_model=SourceResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/ingest/sourcecode", response_model=IngestResponse, status_code=status.HTTP_202_ACCEPTED)
 async def ingest_repository(request: IngestRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """
     Ingests a GitHub repository asynchronously and uploads its contents to a GCS bucket.
@@ -119,7 +119,11 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
             gcs_destination_path=gcs_url
         )
 
-        return {"ws_id": request.ws_id, "status": "PENDING", "message": "Ingestion started successfully"}
+        return IngestResponse(
+            ws_id=request.ws_id,
+            status="QUEUED",
+            message="Codebase ingestion queued successfully!"
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
