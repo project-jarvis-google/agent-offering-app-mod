@@ -1,6 +1,6 @@
 # Use the official lightweight Python image.
 # See https://hub.docker.com/_/python
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Allow statements and log messages to immediately appear in the Knative logs
 ENV PYTHONUNBUFFERED True
@@ -9,10 +9,10 @@ ENV PYTHONUNBUFFERED True
 WORKDIR /app
 
 # Copy local code to the container image.
-COPY requirements.txt ./
+COPY uv.lock ./
 
 # Install user dependencies.
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv sync --frozen --no-dev
 
 # Copy the rest of the application code
 COPY . .

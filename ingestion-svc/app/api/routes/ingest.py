@@ -119,6 +119,8 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
             gcs_destination_path=gcs_url
         )
 
+        return {"ws_id": request.ws_id, "status": "PENDING", "message": "Ingestion started successfully"}
+
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
