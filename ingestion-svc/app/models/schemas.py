@@ -31,11 +31,11 @@ class WorkspaceSchema(BaseModel):
     class Config:
         from_attributes = True
 
-# class IngestRequest(BaseModel):
-#     user_id: str = Field(..., description="The ID of the user triggering ingestion")
-#     repo_url: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
-#     gcs_url: str = Field(..., description="Google Cloud Storage destination URL (e.g., gs://bucket/prefix)")
-#     token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
+class IngestRequest(BaseModel):
+    ws_id: str = Field(..., description="The ID of the user triggering ingestion")
+    repo_url: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
+    token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
+    codebase_name: str = Field(..., description="Name of the application/service")
 
 class SourceResponse(BaseModel):
     id: str
