@@ -24,14 +24,14 @@ from google.adk.tools.agent_tool import AgentTool
 from .config import MODEL
 from .prompt import ROOT_AGENT_PROMPT
 from .sub_agents.google_search_dummy_agent import google_search_dummy_agent
-from .sub_agents.application_analyzer_agent.agent import application_analyzer_agent
+from .sub_agents.discovery_root_agent.agent import discovery_root_agent
 
 root_agent = LlmAgent(
     model=MODEL,
     name="app_mod_agent_coordinator",
     instruction=ROOT_AGENT_PROMPT,
     sub_agents=[
-        application_analyzer_agent,
+        discovery_root_agent,
     ],
     tools=[
         AgentTool(agent=google_search_dummy_agent),

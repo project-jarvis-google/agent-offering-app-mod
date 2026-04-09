@@ -32,6 +32,11 @@ async def perform_cloud_strategy_analysis(tool_context: ToolContext) -> bool:
 
     Format the output elegantly in Markdown with clear columns or headers.
     """
+    
+    user_intent = tool_context.state.get("user_intent")
+    if user_intent:
+        prompt += f"\n\nCRITICAL: Align your strategy and recommendations with the following user goals and constraints:\n{user_intent}\n"
+        
     result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
 
     
