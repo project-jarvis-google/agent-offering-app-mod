@@ -21,7 +21,7 @@ async def perform_dependency_analysis(tool_context: ToolContext) -> bool:
     if len(files_to_scan) == 0:
         logging.warning("Dependency Analysis Staging directory is empty. Nothing to analyze.")
 
-    prompt = "Analyze the dependencies (e.g., pom.xml, package.json, requirements.txt, go.mod, etc.) found in the codebase. Identify key components, third-party libraries, and their relationships. Format the output in Markdown.\n\n"
+    prompt = "Analyze the dependencies (e.g., pom.xml, package.json, requirements.txt, go.mod, etc.) found in the codebase. Identify key components, third-party libraries, and their relationships. For critical dependency issues or recommended upgrades, provide example diffs of the configuration files showing the changes in standard markdown `diff` format. Format the output in Markdown, ensuring a good mix of text summary and code samples.\n\n"
     try:
         logging.info("Executing syft dir:. -o json...")
         syft_result = subprocess.run(

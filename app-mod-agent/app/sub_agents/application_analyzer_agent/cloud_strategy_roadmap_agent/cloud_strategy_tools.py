@@ -24,13 +24,14 @@ async def perform_cloud_strategy_analysis(tool_context: ToolContext) -> bool:
        * Map internal resources to standard GCP counterparts.
        * Support the recommendation with architectural reasoning (e.g., "We recommend Cloud Run over GKE because this workload is stateless and scales well independently").
 
-    3. **Migration Blockers**: 
+    3. **Migration Blockers & Remediation**: 
        * Call out hard-coded absolute paths, tightly coupled localhost bindings, or hardcoded IPs that will block containerization.
+       * For these blockers, provide simple code examples showing the current problematic code and a suggested remediation (e.g., using environment variables or configuration files) in standard markdown `diff` format.
 
     4. **Prioritized Execution Roadmap**: 
        * Outline a step-by-step technical implementation roadmap breaking down which services to tackle first, second, and third.
 
-    Format the output elegantly in Markdown with clear columns or headers.
+    Format the output elegantly in Markdown with clear columns or headers. Ensure code samples are a balanced part of the report alongside text summaries.
     """
     
     user_intent = tool_context.state.get("user_intent")
