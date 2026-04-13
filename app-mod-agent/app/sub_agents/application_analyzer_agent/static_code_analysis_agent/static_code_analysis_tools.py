@@ -26,9 +26,9 @@ async def perform_static_code_analysis(tool_context: ToolContext) -> bool:
     1. **Code Smells & Anti-patterns**: Scan for Fat Controllers, overlapping interface responsibilities, N+1 query loops, or bloated utility files. Cite specific file names.
     2. **Categorized Breakdown**: Group findings comprehensively into High, Medium, and Info Severity tiers.
     3. **Structural Meaning**: Explain how modular or tightly-coupled the project is today structurally, describing how that hinders or encourages cloud modernization later.
-    4. **Recommendations**: Highlight actionable line items providing code adjustments where applicable.
+    4. **Recommendations & Code Samples**: Highlight actionable line items. For key findings, provide illustrative, minimal code snippets demonstrating the issue and a suggested fix in standard markdown `diff` format. Ensure these samples are concise and focus on the specific change needed to visualize the improvement easily.
 
-    Format the output elegantly in Markdown.
+    Format the output elegantly in Markdown. Ensure code samples are a balanced part of the report alongside text summaries.
     """
     try:
         logging.info("Executing semgrep scan --config auto...")
