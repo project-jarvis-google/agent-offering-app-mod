@@ -56,3 +56,11 @@ class SourceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class VerifyRepoRequest(BaseModel):
+    github_url: str = Field(..., description="GitHub repository URL")
+    pat_token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
+
+class VerifyRepoResponse(BaseModel):
+    message: str = Field(..., description="Verification message")
+    error_details: Optional[str] = Field(None, description="Specific error details if any")

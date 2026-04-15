@@ -4,7 +4,7 @@ import tempfile
 import uuid
 import requests
 from typing import List
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -12,7 +12,7 @@ from sqlalchemy import func
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.workspace_manager import WorkspaceManager
-from app.models.schemas import SourceResponse, IngestRequest, IngestResponse, CreateWorkspaceRequest, WorkspaceSchema
+from app.models.schemas import SourceResponse, IngestRequest, IngestResponse, CreateWorkspaceRequest, WorkspaceSchema, VerifyRepoRequest, VerifyRepoResponse
 from app.models.domain import IngestionSource, WorkspaceModel, IngestionStatus
 from app.core.database import get_db, AsyncSessionLocal
 from app.utils.parsers import parse_github_url, parse_gcs_url
@@ -178,6 +178,62 @@ async def get_sources(workspace_id: str, db: AsyncSession = Depends(get_db)):
 #     """Streams the real-time status of a job using Server-Sent Events"""
 #     return EventSourceResponse(ingest_status_generator(request, source_id))
 
+
+@router.post("/verify/repo-access", response_model=VerifyRepoResponse)
+async def verify_repo_access(request: VerifyRepoRequest, response: Response):
+    """
+    Verifies if a GitHub repository is accessible.
+    """
+    logger.info(f"Received verification request for GitHub URL: {request.github_url}")
+    
+    try:
+        owner, repo = parse_github_url(request.github_url)
+    except ValueError as e:
+        logger.error(f"Invalid GitHub URL: {e}")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return VerifyRepoResponse(
+            status="error",
+            message="Invalid GitHub URL",
+            error_details=str(e)
+        )
+
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+
+    if request.pat_token:
+        headers["Authorization"] = f"token {request.pat_token}"
+
+    try:
+        logger.info(f"Sending request to GitHub API for repository: {owner}/{repo}")
+        github_response = await run_in_threadpool(requests.get, url, headers=headers, timeout=10)
+        
+        if github_response.status_code == 200:
+            logger.info(f"Successfully verified access for {owner}/{repo}")
+            return VerifyRepoResponse(
+                message="Repository is accessible."
+            )
+            
+        logger.error(f"Failed to verify access for {owner}/{repo}: {github_response.status_code} {github_response.text}")
+        response.status_code = github_response.status_code
+        
+        if request.pat_token:
+            return VerifyRepoResponse(
+                message="Repository access failed with the provided PAT token.",
+                error_details=github_response.text
+            )
+        else:
+            return VerifyRepoResponse(
+                message="Repository not found or possibly private. Please try providing a PAT token.",
+                error_details=github_response.text
+            )
+
+    except Exception as e:
+        logger.exception(f"Unexpected error during verification of {request.github_url}: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return VerifyRepoResponse(
+            message="An unexpected error occurred during verification.",
+            error_details=str(e)
+        )
 
 @router.get("/health")
 async def health_check():
