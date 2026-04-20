@@ -1,8 +1,12 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from app.api.routes import ingest
 from app.core.database import engine, Base
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +36,7 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-app.openapi = custom_openapi
+if os.environ.get("LOCAL_TESTING", "false") != "true":
+    app.openapi = custom_openapi
 
 app.include_router(ingest.router)

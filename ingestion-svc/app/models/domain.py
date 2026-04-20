@@ -32,7 +32,7 @@ class IngestionSource(Base):
 
     id = Column(String, primary_key=True)
     workspace_id = Column(String, index=True, nullable=False)
-    codebase_name = Column(String, nullable=False)
+    codebase_name = Column(String, nullable=True)
     repo_url = Column(String, nullable=False)
     gcs_destination_url = Column(String, nullable=False)
     status = Column(String, nullable=False, default=IngestionStatus.PENDING)

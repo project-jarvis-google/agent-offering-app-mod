@@ -36,7 +36,7 @@ class IngestRequest(BaseModel):
     source_type: Literal["github"] = Field("github", description="Type of the source data to be ingested")
     source_value: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
     token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
-    source_label: str = Field(..., description="Label for the application/service")
+    source_label: Optional[str] = Field(None, description="Label for the application/service")
     model_config = ConfigDict(extra='ignore')
 
 class IngestResponse(BaseModel):
@@ -47,7 +47,7 @@ class IngestResponse(BaseModel):
 class SourceResponse(BaseModel):
     id: str
     workspace_id: str
-    codebase_name: str
+    codebase_name: Optional[str] = None
     repo_url: str
     gcs_destination_url: str
     status: str
