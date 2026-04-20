@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 import uuid
 from datetime import datetime
@@ -32,10 +32,12 @@ class WorkspaceSchema(BaseModel):
         from_attributes = True
 
 class IngestRequest(BaseModel):
-    ws_id: str = Field(..., description="The ID of the user triggering ingestion")
-    repo_url: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
+    workspace_id: str = Field(..., description="The ID of the user triggering ingestion")
+    source_type: Literal["github"] = Field("github", description="Type of the source data to be ingested")
+    source_value: str = Field(..., description="GitHub repository URL (e.g., https://github.com/owner/repo)")
     token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
-    codebase_name: str = Field(..., description="Name of the application/service")
+    source_label: str = Field(..., description="Label for the application/service")
+    model_config = ConfigDict(extra='ignore')
 
 class IngestResponse(BaseModel):
     ws_id: str = Field(..., description="The Workspace ID of triggering ingestion request")

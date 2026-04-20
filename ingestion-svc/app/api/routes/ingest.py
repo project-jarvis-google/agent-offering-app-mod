@@ -74,28 +74,28 @@ async def background_ingestion_task(
         logger.info(f"Cleaning up temporary directory: {temp_dir}")
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-@router.post("/ingest/sourcecode", response_model=IngestResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_200_OK)
 async def ingest_repository(request: IngestRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     """
     Ingests a GitHub repository asynchronously and uploads its contents to a GCS bucket.
     """
     try:
-        logger.info(f"Received ingestion request for workspace id {request.ws_id} for repo name: {request.codebase_name} and repo url: {request.repo_url}")
+        logger.info(f"Received ingestion request for workspace id {request.workspace_id} for repo label: {request.source_label} and repo url: {request.source_value}")
         
         try:
-            owner, repo = parse_github_url(request.repo_url)
+            owner, repo = parse_github_url(request.source_value)
         except ValueError as e:
             logger.error(f"Invalid GitHub URL: {e}")
             raise
 
-        gcs_url = workspace_manager.get_workspace_path(request.ws_id)
+        gcs_url = workspace_manager.get_workspace_path(request.workspace_id)
 
         # Save initial state in DB
         new_codebase_source = IngestionSource(
             id=str(f"is-{uuid.uuid4().hex[:8]}"),
-            workspace_id=request.ws_id,
-            codebase_name=request.codebase_name,
-            repo_url=request.repo_url,
+            workspace_id=request.workspace_id,
+            codebase_name=request.source_label,
+            repo_url=request.source_value,
             gcs_destination_url=gcs_url,
             status=IngestionStatus.PENDING,
             #TODO: Update size of repository
@@ -120,8 +120,8 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
         )
 
         return IngestResponse(
-            ws_id=request.ws_id,
-            status="QUEUED",
+            ws_id=request.workspace_id,
+            status="success",
             message="Codebase ingestion queued successfully!"
         )
 
