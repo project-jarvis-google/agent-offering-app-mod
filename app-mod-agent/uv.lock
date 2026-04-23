@@ -124,7 +124,7 @@ requires-dist = [
     { name = "fpdf", specifier = "==1.7.2" },
     { name = "gitingest" },
     { name = "gitpython", specifier = ">=3.1.45" },
-    { name = "google-adk", specifier = ">=1.28.1" },
+    { name = "google-adk", specifier = ">=1.30.0" },
     { name = "google-cloud-aiplatform", specifier = ">=1.132.0" },
     { name = "google-cloud-logging", specifier = "~=3.11.4" },
     { name = "google-cloud-storage" },
@@ -132,7 +132,7 @@ requires-dist = [
     { name = "googlesearch-python" },
     { name = "jupyter", marker = "extra == 'jupyter'", specifier = "~=1.0.0" },
     { name = "markdown-it-py", specifier = "==3.0.0" },
-    { name = "markdown-pdf", specifier = "==1.9" },
+    { name = "markdown-pdf", specifier = "==1.13.1" },
     { name = "mypy", marker = "extra == 'lint'", specifier = "~=1.15.0" },
     { name = "mysql-connector-python" },
     { name = "opentelemetry-exporter-gcp-trace", specifier = "~=1.9.0" },
@@ -2098,15 +2098,18 @@ wheels = [
 
 [[package]]
 name = "markdown-pdf"
-version = "1.9"
+version = "1.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py" },
+    { name = "plantuml" },
     { name = "pymupdf" },
+    { name = "requests" },
+    { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/ba/2eb80914dc3309358688fc9bb934e6d877ef3e32495518d911a92e07e037/markdown_pdf-1.9.tar.gz", hash = "sha256:2c8166a5d2259689737b865c256b2eafb371ffcfab92977192bca40d16b038c9", size = 17572 }
+sdist = { url = "https://files.pythonhosted.org/packages/da/23/78746e935e2e231e57bd2b314260051e60874d1a49f8b9f07646ac1d6b2d/markdown_pdf-1.13.1.tar.gz", hash = "sha256:400346308d15d83e3aee31034c076c9d45fbe8391bdbf5707814e43f065d952b", size = 22869 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/da/c48dac3626ec28581061bc702aca4655bcbdf8d4697450f94836c0d314b5/markdown_pdf-1.9-py3-none-any.whl", hash = "sha256:44ec65d9a55d28dc07c1a95d2afdc2c218555a3d3e44fb0201f3770111f92319", size = 17760 },
+    { url = "https://files.pythonhosted.org/packages/1e/d0/3dcd42e6d899b92885cfee32a72622b5ab775928d5a890c892f7405d6d1b/markdown_pdf-1.13.1-py3-none-any.whl", hash = "sha256:647f1db9437e488536cb1a4d941cc4e768fe07feac4f251648e4617017128a03", size = 21157 },
 ]
 
 [[package]]
@@ -3926,7 +3929,7 @@ wheels = [
 
 [[package]]
 name = "requests"
-version = "2.32.4"
+version = "2.33.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -3934,9 +3937,9 @@ dependencies = [
     { name = "idna" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/0a/929373653770d8a0d7ea76c37de6e41f11eb07559b103b1c02cafb3f7cf8/requests-2.32.4.tar.gz", hash = "sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422", size = 135258 }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/a4/98b9c7c6428a668bf7e42ebb7c79d576a1c3c1e3ae2d47e674b468388871/requests-2.33.1.tar.gz", hash = "sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517", size = 134120 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/e4/56027c4a6b4ae70ca9de302488c5ca95ad4a39e190093d6c1a8ace08341b/requests-2.32.4-py3-none-any.whl", hash = "sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c", size = 64847 },
+    { url = "https://files.pythonhosted.org/packages/d7/8e/7540e8a2036f79a125c1d2ebadf69ed7901608859186c856fa0388ef4197/requests-2.33.1-py3-none-any.whl", hash = "sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a", size = 64947 },
 ]
 
 [[package]]
