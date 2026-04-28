@@ -22,7 +22,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/appmod", tags=["Workspaces"])
+router = APIRouter(prefix="/app-mod", tags=["Workspaces"])
 
 workspace_manager = WorkspaceManager()
 
@@ -184,10 +184,10 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
     """
     Verifies if a GitHub repository is accessible.
     """
-    logger.info(f"Received verification request for GitHub URL: {request.github_url}")
+    logger.info(f"Received verification request for GitHub URL: {request.source_value}")
     
     try:
-        owner, repo = parse_github_url(request.github_url)
+        owner, repo = parse_github_url(request.source_value)
     except ValueError as e:
         logger.error(f"Invalid GitHub URL: {e}")
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -200,8 +200,8 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
     url = f"https://api.github.com/repos/{owner}/{repo}"
     headers = {"Accept": "application/vnd.github.v3+json"}
 
-    if request.pat_token:
-        headers["Authorization"] = f"token {request.pat_token}"
+    if request.token:
+        headers["Authorization"] = f"token {request.token}"
 
     try:
         logger.info(f"Sending request to GitHub API for repository: {owner}/{repo}")
@@ -216,7 +216,7 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
         logger.error(f"Failed to verify access for {owner}/{repo}: {github_response.status_code} {github_response.text}")
         response.status_code = github_response.status_code
         
-        if request.pat_token:
+        if request.token:
             return VerifyRepoResponse(
                 message="Repository access failed with the provided PAT token.",
                 error_details=github_response.text
@@ -228,7 +228,7 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
             )
 
     except Exception as e:
-        logger.exception(f"Unexpected error during verification of {request.github_url}: {e}")
+        logger.exception(f"Unexpected error during verification of {request.source_value}: {e}")
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return VerifyRepoResponse(
             message="An unexpected error occurred during verification.",
