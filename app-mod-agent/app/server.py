@@ -14,14 +14,18 @@
 """Agent App"""
 
 import os
-
+from dotenv import load_dotenv
+from urllib.parse import quote
 import google.auth
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider, export
 
+from app.api import agent
 from app.utils.tracing import CloudTraceLoggingSpanExporter
+
+load_dotenv()
 
 _, project_id = google.auth.default()
 allow_origins = (
@@ -37,13 +41,10 @@ AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # AlloyDB session configuration
 db_user = os.environ.get("DB_USER", "postgres")
 db_name = os.environ.get("DB_NAME", "postgres")
-db_pass = os.environ.get("DB_PASS")
-db_host = os.environ.get("DB_HOST")
+db_pass = quote(os.environ.get("DB_PASS"), safe='')
+instance_conn_name = os.environ.get("INSTANCE_CONNECTION_NAME")
 
-# Set session_service_uri if database credentials are available
-SESSION_SERVICE_URI = None
-if db_host and db_pass:
-    SESSION_SERVICE_URI = f"postgresql://{db_user}:{db_pass}@{db_host}:5432/{db_name}"
+SESSION_SERVICE_URI = f"postgresql+asyncpg://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{instance_conn_name}"
 app: FastAPI = get_fast_api_app(
     agents_dir=AGENT_DIR,
     web=True,
@@ -52,6 +53,7 @@ app: FastAPI = get_fast_api_app(
 )
 app.title = "app-mod-agent-app"
 app.description = "API for interacting with the Agent app-mod-agent-app"
+app.include_router(agent.router)
 
 # Main execution
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ backend-deploy:
 	gcloud run deploy app-mod-agent-backend \
 		--source . \
 		--env-vars-file=./.env.prod.yaml \
-		--update-secrets=GEMINI_API_KEY=app-mod-agent-GEMINI-API-KEY:latest \
+		--update-secrets=GEMINI_API_KEY=app-mod-agent-GEMINI-API-KEY:latest,DB_PASS=app-mod-session-svc-db-pass:latest \
 		--memory "4Gi" \
 		--project $$PROJECT_ID \
 		--region "us-central1" \
