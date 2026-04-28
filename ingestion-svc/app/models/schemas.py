@@ -60,8 +60,9 @@ class SourceResponse(BaseModel):
         from_attributes = True
 
 class VerifyRepoRequest(BaseModel):
-    github_url: str = Field(..., description="GitHub repository URL")
-    pat_token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
+    source_type: Literal["github"] = Field("github", description="Type of the source data to be ingested")
+    source_value: str = Field(..., description="GitHub repository URL")
+    token: Optional[str] = Field(None, description="Optional GitHub Private Access Token")
 
 class VerifyRepoResponse(BaseModel):
     message: str = Field(..., description="Verification message")
