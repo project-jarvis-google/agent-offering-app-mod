@@ -55,6 +55,9 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         
         # Google-inspired CSS
         google_css = """
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Roboto', 'Arial', sans-serif;
             line-height: 1.6;
@@ -67,20 +70,24 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
             border-bottom: 1px solid #e0e0e0;
             padding-bottom: 10px;
             margin-top: 30px;
+            page-break-after: avoid;
         }
         h2 {
             color: #188038;
             font-size: 22px;
             margin-top: 25px;
+            page-break-after: avoid;
         }
         h3 {
             color: #f9ab00;
             font-size: 18px;
             margin-top: 20px;
+            page-break-after: avoid;
         }
         h4 {
             color: #d93025;
             font-size: 16px;
+            page-break-after: avoid;
         }
         code {
             background-color: #f8f9fa;
@@ -95,8 +102,11 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
             padding: 15px;
             border: 1px solid #dadce0;
             border-radius: 8px;
-            overflow-x: auto;
             margin-bottom: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            page-break-inside: avoid;
+            max-width: 100%;
         }
         pre code {
             color: #3c4043;
@@ -105,16 +115,19 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         }
         table {
             width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
             box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
             border-radius: 8px;
             overflow: hidden;
+            table-layout: fixed;
         }
         th, td {
             border: 1px solid #e0e0e0;
             padding: 12px 16px;
             text-align: left;
+            word-wrap: break-word;
         }
         th {
             background-color: #f1f3f4;
@@ -136,6 +149,7 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
             border-radius: 8px;
             padding: 10px;
             background-color: white;
+            page-break-inside: avoid;
         }
         blockquote {
             border-left: 4px solid #1a73e8;
@@ -143,10 +157,11 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
             padding: 10px 20px;
             margin: 20px 0;
             border-radius: 0 4px 4px 0;
+            page-break-inside: avoid;
         }
         """
         
-        pdf.add_section(Section(processed_report), user_css=google_css)
+        pdf.add_section(Section(processed_report, paper_size=(400, 600)), user_css=google_css)
         
         # 3. Save to bytes
         pdf_buffer = io.BytesIO()

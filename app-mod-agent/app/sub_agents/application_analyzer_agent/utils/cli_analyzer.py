@@ -20,6 +20,7 @@ class GeminiCliAnalyzer(CodebaseAnalyzer):
             gemini_env["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
 
         gemini_env["GEMINI_MODEL"] = model_name
+        gemini_env["GEMINI_CLI_TRUST_WORKSPACE"] = "true"
         logging.info("Executing gemini CLI on %s with model %s...", secure_temp_repo_dir, model_name)
 
         try:
