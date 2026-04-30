@@ -4,6 +4,20 @@ import tempfile
 from google.cloud import storage
 from google.adk.tools import ToolContext
 
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import select
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, String
+from google.cloud import secretmanager
+
+Base = declarative_base()
+
+class IngestionSourceModel(Base):
+    __tablename__ = "ingestion_sources"
+    id = Column(String, primary_key=True)
+    workspace_id = Column(String, nullable=False)
+    gcs_destination_url = Column(String, nullable=False)
+
 async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolContext) -> bool:
     """
     Downloads the contents of a GCS folder to a temporary local directory 
@@ -82,3 +96,70 @@ async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolCont
         return False
 
     return sourceCodeStored
+
+async def _resolve_workspace_to_gcs(workspace_id: str) -> str:
+    """
+    Queries the database to convert workspace_id to GCS location.
+    """
+    logging.info("Resolving workspace ID: %s", workspace_id)
+    
+    try:
+        db_pass = os.environ.get("INGESTION_DB_PASS")
+        if not db_pass:
+            raise ValueError("INGESTION_DB_PASS environment variable is not set")
+        db_pass = db_pass.strip()
+        
+        db_user = os.environ.get("INGESTION_DB_USER", "postgres")
+        db_name = os.environ.get("INGESTION_DB_NAME", "postgres")
+        instance_conn_name = os.environ.get("INGESTION_INSTANCE_CONNECTION_NAME", "agents-stg:us-central1:iw-ingestion-svc-db")
+        
+        from urllib.parse import quote
+        if os.getenv("USE_LOCAL_DB") == "true":
+            uri = f"postgresql+asyncpg://{db_user}:{quote(db_pass, safe='')}@localhost:5432/{db_name}"
+        else:
+            uri = f"postgresql+asyncpg://{db_user}:{quote(db_pass, safe='')}@/{db_name}?host=/cloudsql/{instance_conn_name}"
+        
+        logging.info("Connecting to DB %s on %s as %s...", db_name, instance_conn_name, db_user)
+        engine = create_async_engine(uri)
+        
+        async with engine.connect() as conn:
+            stmt = select(IngestionSourceModel.gcs_destination_url).where(IngestionSourceModel.workspace_id == workspace_id)
+            result = await conn.execute(stmt)
+            gcs_url = result.scalar_one_or_none()
+            
+            if not gcs_url and len(workspace_id) > 11:
+                prefix_id = workspace_id[:11]
+                logging.info("Trying prefix match with: %s", prefix_id)
+                stmt = select(IngestionSourceModel.gcs_destination_url).where(IngestionSourceModel.workspace_id == prefix_id)
+                result = await conn.execute(stmt)
+                gcs_url = result.scalar_one_or_none()
+
+            if gcs_url:
+                gcs_uri = gcs_url.rstrip("/") + "/source_files/"
+                logging.info("Resolved workspace %s to %s", workspace_id, gcs_uri)
+                return gcs_uri
+            else:
+                logging.warning("Workspace %s not found in ingestion_sources", workspace_id)
+                return ""
+                
+    except Exception as e:
+        logging.exception("Error resolving workspace from DB: %s", e)
+        return ""
+        
+    finally:
+        if 'engine' in locals():
+            await engine.dispose()
+
+async def resolve_workspace_gcs_uri(tool_context: ToolContext) -> str:
+    """
+    Resolves the GCS URI from the workspace_id stored in state.
+    """
+    workspace_id = tool_context.state.get("workspace_id")
+    if not workspace_id:
+        logging.info("No workspace_id found in state.")
+        return ""
+        
+    gcs_uri = await _resolve_workspace_to_gcs(workspace_id)
+    logging.info("Resolved workspace_id %s to %s", workspace_id, gcs_uri)
+    
+    return gcs_uri
