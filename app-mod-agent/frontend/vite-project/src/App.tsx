@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const { isBackendReady, isCheckingBackend } = useBackendHealth(API_BASE_URL);
 
   const [mode, setMode] = useState<"light" | "dark">("light");
+  const [workspaceId, setWorkspaceId] = useState("default_workspace");
 
   const colorMode = useMemo(
     () => ({
@@ -68,9 +69,9 @@ const App: React.FC = () => {
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <ChatProvider apiBaseUrl={API_BASE_URL}>
+        <ChatProvider apiBaseUrl={API_BASE_URL} workspaceId={workspaceId}>
           <Routes>
-            <Route path="/" element={<Layout />}>
+            <Route path="/" element={<Layout workspaceId={workspaceId} setWorkspaceId={setWorkspaceId} />}>
               <Route index element={<Home />} />
               <Route path="chat" element={<Chat />} />
               <Route path="about" element={<AboutPage />} />{" "}

@@ -16,6 +16,7 @@ import {
   AppBar as MuiAppBar,
   Toolbar,
   Stack,
+  TextField,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -87,7 +88,12 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 
 const agentList = [{ name: "SPARC", icon: <AutoAwesomeIcon /> }];
 
-const Layout: React.FC = () => {
+interface LayoutProps {
+  workspaceId: string;
+  setWorkspaceId: (id: string) => void;
+}
+
+const Layout: React.FC<LayoutProps> = ({ workspaceId, setWorkspaceId }) => {
   const [open, setOpen] = useState(true);
   const navigate = useNavigate(); 
   const location = useLocation();
@@ -149,6 +155,38 @@ const Layout: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
+          
+          <TextField
+            label="Workspace ID"
+            variant="outlined"
+            size="small"
+            value={workspaceId}
+            onChange={(e) => setWorkspaceId(e.target.value)}
+            sx={{ 
+              width: 200, 
+              ml: 'auto',
+              background: "rgba(255, 255, 255, 0.15)",
+              borderRadius: "4px",
+              "& .MuiOutlinedInput-root": {
+                color: theme.palette.mode === "dark" ? "#fff" : "#111",
+                "& fieldset": {
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                },
+                "&:hover fieldset": {
+                  borderColor: "rgba(255, 255, 255, 0.5)",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: theme.palette.mode === "dark" ? "#FFEB3B" : "#1976d2",
+                },
+              },
+              "& .MuiInputLabel-root": {
+                color: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+                "&.Mui-focused": {
+                  color: theme.palette.mode === "dark" ? "#FFEB3B" : "#1976d2",
+                },
+              },
+            }}
+          />
         </Toolbar>
       </AppBar>
 
