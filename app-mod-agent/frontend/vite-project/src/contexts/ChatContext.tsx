@@ -14,8 +14,9 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{
   children: ReactNode;
   apiBaseUrl: string;
-}> = ({ children, apiBaseUrl }) => {
-  const chatLogic = useChat(apiBaseUrl);
+  workspaceId: string;
+}> = ({ children, apiBaseUrl, workspaceId }) => {
+  const chatLogic = useChat(apiBaseUrl, workspaceId);
 
   return (
     <ChatContext.Provider value={chatLogic}>{children}</ChatContext.Provider>

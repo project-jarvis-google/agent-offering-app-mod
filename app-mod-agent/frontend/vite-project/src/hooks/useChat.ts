@@ -71,7 +71,7 @@ const base64ToBlobUrl = (base64Data: string, mimeType: string) => {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export function useChat(apiBaseUrl: string) {
+export function useChat(apiBaseUrl: string, workspaceId: string) {
   const [userId, setUserId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [appName, setAppName] = useState<string | null>(null);
@@ -201,6 +201,7 @@ export function useChat(apiBaseUrl: string) {
           sessionId: currentSessionId,
           newMessage: { parts: messageParts, role: "user" },
           streaming: true,
+          stateDelta: { workspace_id: workspaceId },
         };
 
         abortControllerRef.current = new AbortController();
@@ -324,7 +325,7 @@ export function useChat(apiBaseUrl: string) {
         isSubmittingRef.current = false;
       }
     },
-    [isLoading, sessionId, userId, appName, apiBaseUrl, createSession]
+    [isLoading, sessionId, userId, appName, apiBaseUrl, createSession, workspaceId]
   );
 
   const handleCancel = useCallback(() => {
