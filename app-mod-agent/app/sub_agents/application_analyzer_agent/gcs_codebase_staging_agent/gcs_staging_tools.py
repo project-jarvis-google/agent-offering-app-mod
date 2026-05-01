@@ -135,7 +135,7 @@ async def _resolve_workspace_to_gcs(workspace_id: str) -> str:
                 gcs_url = result.scalar_one_or_none()
 
             if gcs_url:
-                gcs_uri = gcs_url.rstrip("/") + "/source_files/"
+                gcs_uri = gcs_url.rstrip("/")
                 logging.info("Resolved workspace %s to %s", workspace_id, gcs_uri)
                 return gcs_uri
             else:
