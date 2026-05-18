@@ -16,7 +16,7 @@ def get_analyzer() -> CodebaseAnalyzer:
         logging.info("Using Gemini CLI codebase analyzer.")
         return GeminiCliAnalyzer()
 
-async def analyze_codebase_with_gemini(secure_temp_repo_dir: str, prompt: str, model_name: str = "gemini-3.1-pro-preview") -> str:
+async def analyze_codebase_with_gemini(secure_temp_repo_dir: str, prompt: str, model_name: str = "gemini-2.5-pro") -> str:
     """
     Wrapper function that delegates to the configured analyzer.
     Existing tools call this function, so its signature remains unchanged.

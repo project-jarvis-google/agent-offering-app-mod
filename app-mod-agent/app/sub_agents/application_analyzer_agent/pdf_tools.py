@@ -51,7 +51,7 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         processed_report = process_mermaid(report_content)
         
         # 2. Create PDF and add section with CSS
-        pdf = MarkdownPdf()
+        pdf = MarkdownPdf(toc_level=0)
         
         # Google-inspired CSS
         google_css = """
