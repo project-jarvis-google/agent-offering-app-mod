@@ -21,11 +21,21 @@ async def perform_dependency_analysis(tool_context: ToolContext) -> bool:
     if len(files_to_scan) == 0:
         logging.warning("Dependency Analysis Staging directory is empty. Nothing to analyze.")
 
-    prompt = "Analyze the dependencies (e.g., pom.xml, package.json, requirements.txt, go.mod, etc.) found in the codebase. Identify key components, third-party libraries, and their relationships. For critical dependency issues or recommended upgrades, provide example diffs of the configuration files showing the changes in standard markdown `diff` format. Format the output in Markdown, ensuring a good mix of text summary and code samples.\n\n"
+    prompt = """Analyze the dependencies (e.g., pom.xml, package.json, requirements.txt, go.mod, etc.) and the complete Syft SBOM output found in the codebase.
+Do NOT provide generic or high-level summaries. You MUST provide an exhaustive, highly detailed composition and dependency analysis covering:
+1. **Domain-by-Domain Technology Stack Breakdown (For Section 2)**: Categorize all detected technologies, languages, frameworks, databases, and third-party libraries into distinct architectural domains (e.g., Backend Framework, Language & Runtime, Databases, Frontend, DevOps/Build Tools). For each domain, provide a clear Markdown table with EXACTLY the following columns:
+| Technology/Tool Name | Version | Purpose/Role | EOL Status & Replacement Recommendation |
+Ensure every entry specifies its exact version (or marks as Inherited/Managed), explains its specific purpose/role in the application, and provides a concrete End-of-Life (EOL) status assessment (e.g., 'Not EOL. Actively maintained.' or 'EOL/Deprecated. Upgrade recommended to X.').
+2. **Complete Bill of Materials (BOM) Inventory (For Section 5)**: Present an exhaustive inventory of all detected packages, libraries, and dependencies across all build systems (`pom.xml`, `package.json`, `requirements.txt`, `go.mod`, `build.gradle`, etc.) and Syft SBOM scans.
+3. **Problematic Library Risk Matrix & Recommendations**: Provide a comprehensive Markdown table mapping all problematic packages: `| Low-Level Package Name | Current Version | Detected Build Manifest | Vulnerability / Deprecation / License Risk | Actionable Remediation & Upgrade Target |`. Ensure you explicitly provide concrete upgrade recommendations for every outdated or risky library to give users full confidence.
+4. **License Compliance Audit**: Identify restrictive copyleft licenses (GPL, AGPL) vs permissive licenses (MIT, Apache).
+5. **Actionable Configuration Upgrade Diffs**: For critical dependency issues or recommended upgrades, provide concrete markdown `diff` blocks demonstrating exactly how to update configuration files to secure versions.
+
+Format the output elegantly in Markdown, ensuring a good mix of text summary, structured tables, and code samples.\n\n"""
     try:
-        logging.info("Executing syft dir:. -o json...")
+        logging.info("Executing syft scan dir:. -o json --override-default-catalogers all --enrich all...")
         syft_result = subprocess.run(
-            ["syft", "dir:.", "-o", "json"],
+            ["syft", "scan", "dir:.", "-o", "json", "--override-default-catalogers", "all", "--enrich", "all"],
             cwd=secure_temp_repo_dir,
             capture_output=True,
             text=True,
@@ -35,9 +45,9 @@ async def perform_dependency_analysis(tool_context: ToolContext) -> bool:
         if syft_result.stdout.strip():
              try:
                  json.loads(syft_result.stdout)
-                 logging.debug("--- [Syft Raw Output] ---")
-                 logging.debug(syft_result.stdout)
-                 logging.debug("-------------------------")
+                 logging.info("--- [Syft Raw Output] ---")
+                 logging.info(syft_result.stdout)
+                 logging.info("-------------------------")
                  prompt += f"I have run 'syft' to generate an SBOM configuration. Here is the JSON output:\n{syft_result.stdout}\n\nPlease factor this into your dependency analysis.\n"
                  logging.info("Syft findings attached successfully.")
              except json.JSONDecodeError:
