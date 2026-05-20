@@ -55,63 +55,79 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         
         # Google-inspired CSS
         google_css = """
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
         * {
             box-sizing: border-box;
+            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
         }
         body {
-            font-family: 'Roboto', 'Arial', sans-serif;
             line-height: 1.6;
             color: #3c4043;
-            margin: 30px;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
+            page-break-after: avoid;
+            max-width: 100%;
         }
         h1 {
             color: #1a73e8;
-            font-size: 28px;
+            font-size: 26px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 10px;
-            margin-top: 30px;
-            page-break-after: avoid;
+            padding-bottom: 8px;
+            margin-top: 24px;
         }
         h2 {
             color: #188038;
-            font-size: 22px;
-            margin-top: 25px;
-            page-break-after: avoid;
+            font-size: 20px;
+            margin-top: 20px;
         }
         h3 {
             color: #f9ab00;
             font-size: 18px;
-            margin-top: 20px;
-            page-break-after: avoid;
+            margin-top: 18px;
         }
         h4 {
             color: #d93025;
             font-size: 16px;
-            page-break-after: avoid;
+            margin-top: 16px;
+        }
+        p, li {
+            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
         }
         code {
             background-color: #f8f9fa;
             padding: 2px 6px;
             border-radius: 4px;
-            font-family: 'Roboto Mono', 'Courier', monospace;
+            font-family: 'Roboto Mono', 'Courier New', monospace;
             font-size: 90%;
             color: #d93025;
+            word-break: break-word;
         }
         pre {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 12px;
             border: 1px solid #dadce0;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             white-space: pre-wrap;
             word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-all;
             page-break-inside: avoid;
+            width: 100%;
             max-width: 100%;
         }
         pre code {
             color: #3c4043;
             background-color: transparent;
             padding: 0;
+            word-break: break-all;
         }
         table {
             width: 100%;
@@ -125,14 +141,19 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         }
         th, td {
             border: 1px solid #e0e0e0;
-            padding: 12px 16px;
+            padding: 10px 12px;
             text-align: left;
             word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
+            font-size: 14px;
         }
         th {
             background-color: #f1f3f4;
             color: #202124;
-            font-weight: 500;
+            font-weight: 700;
         }
         tr:nth-child(even) {
             background-color: #f8f9fa;
@@ -142,22 +163,26 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         }
         img {
             max-width: 100%;
+            width: auto;
             height: auto;
             display: block;
-            margin: 20px auto;
+            margin: 16px auto;
             border: 1px solid #dadce0;
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px;
             background-color: white;
             page-break-inside: avoid;
+            box-sizing: border-box;
         }
         blockquote {
             border-left: 4px solid #1a73e8;
             background-color: #e8f0fe;
-            padding: 10px 20px;
-            margin: 20px 0;
+            padding: 10px 16px;
+            margin: 16px 0;
             border-radius: 0 4px 4px 0;
             page-break-inside: avoid;
+            max-width: 100%;
+            word-wrap: break-word;
         }
         """
         
