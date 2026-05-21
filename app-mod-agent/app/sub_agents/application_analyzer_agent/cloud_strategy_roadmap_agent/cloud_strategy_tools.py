@@ -12,27 +12,30 @@ async def perform_cloud_strategy_analysis(tool_context: ToolContext) -> bool:
         return False
         
     prompt = """
-    Analyze the cloud readiness and modernization potential of this application based on the supplied codebase. 
-    Do NOT provide generic guidance. You MUST provide a concrete, exhaustive, and highly actionable Google Cloud modernization strategy and roadmap covering exactly the following dimensions:
+    Analyze the cloud readiness, 12-Factor compliance, and structural modernization potential of this application based on the supplied codebase. 
+    Do NOT provide generic guidance. You are a Lead Google Cloud Migration Architect. You MUST provide a concrete, exhaustive, and highly actionable Google Cloud modernization strategy and roadmap covering exactly the following dimensions in rigorous detail:
 
-    1. **Migration Overview**: Provide a high-level executive summary of the recommended migration path, target cloud operating model, and expected business outcomes.
+    1. **Migration Overview**: Provide a high-level executive summary of the recommended migration path, target cloud operating model, and expected operational efficiency outcomes.
     2. **Migration Targets in GCP (Core Workloads)**: 
-       * For each primary legacy component (e.g., Compute, Database, Messaging), recommend the optimal GCP target (e.g., Cloud Run vs GKE vs App Engine).
+       * For each primary legacy component (Compute, Database, Storage, Messaging), recommend the optimal managed GCP target (Cloud Run vs GKE vs App Engine).
        * Present a detailed Markdown table with columns: `| Legacy Component | Recommended GCP Service | R-Strategy (5 R's) | Justification (Pros & Cons Weigh-In) | Complexity (L/M/H) |`.
     3. **Additional Recommended Google Cloud Services (Ecosystem Integration)**: 
-       * Identify and recommend supplementary GCP services that the customer's architecture can benefit from (e.g., CI/CD with Cloud Build/Artifact Registry, Observability with Cloud Logging/Monitoring, Secret Management with Secret Manager, Object Storage with Cloud Storage, Async Messaging with Pub/Sub, Caching with Memorystore).
+       * Identify and recommend supplementary GCP services that the architecture can benefit from (CI/CD with Cloud Build/Artifact Registry, Observability with Cloud Logging/Monitoring, Secret Management with Secret Manager, Object Storage with Cloud Storage, Async Messaging with Pub/Sub, Caching with Memorystore).
        * Present an exhaustive Markdown table with columns: `| Domain / Capability | Recommended GCP Service | Value Proposition & Relevance | Implementation Complexity (L/M/H) |`.
-    4. **Migration Dependencies & Pre-requisites**: 
-       * Outline critical sequencing dependencies (e.g., establishing Cloud Interconnect/VPN, setting up IAM & Resource Hierarchy, completing Database Migration before application cutover).
-    5. **Architectural Modernization Opportunities**: 
-       * Detail concrete pointer-level refactoring and architectural modernization opportunities (e.g., decoupling state, adopting asynchronous event-driven patterns, breaking monoliths into microservices) to make the application cloud-native.
-    6. **Migration Blockers & Remediation**: 
-       * Call out hard-coded absolute paths, tightly coupled localhost bindings, or hardcoded IPs that will block containerization.
-       * Provide illustrative code snippets demonstrating the issue and a suggested fix in standard markdown `diff` format.
-    7. **Prioritized Execution Roadmap**: 
-       * Outline a step-by-step technical implementation roadmap breaking down execution into Phased delivery plans.
+    4. **Zero-Downtime Database Migration Mechanics**: 
+       * Outline the exact operational stages for a zero-downtime database cutover plan. Describe schema export validation, continuous Change Data Capture (CDC) replication setup via Google Cloud Database Migration Service (DMS), and staged read-replica elevation mechanics.
+    5. **12-Factor App State Decoupling & Refactoring**: 
+       * Perform an explicit audit of local in-memory caching layers (e.g., Caffeine, EhCache) and local filesystem access. Provide illustrative refactoring code diffs demonstrating exactly how to abstract localized state into Google Cloud Memorystore (Redis) and Google Cloud Storage.
+       * Detail event-driven refactoring opportunities (e.g., introducing Pub/Sub message wrappers around synchronous batch operations).
+    6. **Target Fit & Least-Privilege IAM Mapping**: 
+       * Identify migration blockers (hardcoded absolute paths, tightly coupled localhost socket bindings) and provide remediation diffs.
+       * Map out Workload Identity security requirements in a table with columns: `| Container Service / Component | Service Account Role Binding | Permissions Included | Target Bound GCP Resource |`. Detail specific IAM roles (e.g., roles/cloudsql.client, roles/secretmanager.secretAccessor).
+       * Provide sample Kubernetes or Cloud Run service YAML diffs demonstrating correct environment variables and secret injection.
+    7. **Prioritized Execution Roadmap (Strangler Fig Implementation)**: 
+       * Outline a step-by-step technical implementation roadmap breaking down execution into Phased delivery sprints (Phase 1: Foundation & Replatform, Phase 2: Security & 12-Factor Modernization, Phase 3: Strangler Fig Microservice Decoupling).
+       * For Phase 3, provide explicit API Gateway routing rules and strategies for isolating legacy bounded contexts into decoupled Cloud Run microservices.
 
-    Format the output elegantly in Markdown with clear columns, tables, and headers. Ensure code samples are a balanced part of the report alongside text summaries.
+    Format the output elegantly in Markdown with deep technical detail, structured tables, and illustrative diffs.
     """
     
     user_intent = tool_context.state.get("user_intent")

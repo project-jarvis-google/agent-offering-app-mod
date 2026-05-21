@@ -25,15 +25,15 @@ async def perform_context_analysis(tool_context: ToolContext) -> bool:
     Analyze the architecture, business context, and purpose of this application based on the codebase provided. 
     Do NOT provide generic or high-level guidance. You MUST provide an exhaustive, deep-dive architectural and business analysis addressing the following:
     1. **Executive Business Context**:
-       * **Application Summary**: Provide a concise summary (up to 5-6 lines max) explaining what the application is, its primary domain, and what it accomplishes based on codebase understanding.
-       * **Core Features & Capabilities**: Identify the primary business capabilities, core features, and main workflows implemented in the code.
-       * **Primary Users & Personas**: Infer the key user personas, upstream systems, or API consumers interacting with the application. Highlight the specific value and capabilities each persona derives from the system.
-    2. **Frameworks & Core Libraries**: Identify major application frameworks (e.g., Spring Boot, FastAPI, React) and heavy-weight dependencies influencing the design. Detail their exact structural roles and configuration mechanisms.
-    3. **Databases & Persistence**: Detect database drivers, ORMs, connection pools, caching layers, and local disk IO. Describe data flow models, connection lifecycles, and persistence strategies.
-    4. **Utilities & Infrastructure**: Call out messaging queues, background worker threads, and system utilities. Explain configuration patterns and environmental requirements.
-    5. **Architectural Correlation & Component Interactions**: explicitly correlate these technical components against the directory layout and modular boundaries. Describe precisely how separate modules and services communicate and function together systemically.
+       * **Application Summary**: Provide a thorough, comprehensive business overview explaining what the application is, its primary operational domain, and the core problems it solves.
+       * **Core Features & Capabilities**: Detail the primary business capabilities, main operational workflows, and domain boundaries established in the code.
+       * **Primary Users & Personas**: Identify key user personas, client interfaces, upstream services, and external consumers interacting with the application. Detail the specific value proposition for each.
+    2. **Frameworks & Core Libraries**: Identify major application frameworks, runtimes, and core architectural dependencies. Detail their exact structural roles, modular dependencies, and configuration management models.
+    3. **Databases & Persistence Models**: Detect database drivers, ORMs, connection lifecycle pools, caching tiers, and raw filesystem access. Describe data flow models, transaction lifecycles, and state persistence contracts.
+    4. **Utilities & Async Infrastructure**: Evaluate messaging brokers, background processing queues, scheduled worker daemons, and system utilities. Detail configuration injection patterns across environments.
+    5. **Architectural Correlation & Data Flow**: Correlate technical components against directory structures and API contracts. Map exactly how modular services communicate and trace data across systemic boundaries.
 
-    Format the output elegantly in Markdown with comprehensive detail.
+    Format the output with professional executive rigor and deep technical detail in Markdown.
     """
     try:
         output_file = os.path.abspath(os.path.join(secure_temp_repo_dir, "stack.json"))
@@ -69,6 +69,27 @@ async def perform_context_analysis(tool_context: ToolContext) -> bool:
 
     except Exception as e:
         logging.warning("Failed to run @specfy/stack-analyser due to exception: %s", e)
+
+    tool_context.state["tokei_analysis_result"] = "No Tokei metrics captured."
+    try:
+        logging.info("Executing tokei analyzer over directory %s...", secure_temp_repo_dir)
+        tokei_res = subprocess.run(
+            ["tokei", ".", "--sort", "files"],
+            cwd=secure_temp_repo_dir,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        tokei_summary = tokei_res.stdout.strip()
+        logging.info("Tokei execution successful. Output size: %d bytes", len(tokei_summary))
+        logging.info("--- [Tokei Language Summary] ---\n%s\n-------------------------------", tokei_summary)
+        
+        tool_context.state["tokei_analysis_result"] = tokei_summary
+
+    except subprocess.CalledProcessError as e:
+        logging.warning("Failed to run tokei. Exit code: %d, Stderr: %s", e.returncode, e.stderr)
+    except Exception as e:
+        logging.warning("Failed to run tokei due to exception: %s", e)
 
     result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
     
