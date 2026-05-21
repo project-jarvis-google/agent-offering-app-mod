@@ -34,7 +34,7 @@ class GeminiCliAnalyzer(CodebaseAnalyzer):
                 stderr=subprocess.PIPE
             )
             
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=900)
             
             stdout_str = stdout.decode().strip()
             stderr_str = stderr.decode().strip()
@@ -45,7 +45,7 @@ class GeminiCliAnalyzer(CodebaseAnalyzer):
                 
             return stdout_str
         except asyncio.TimeoutError:
-             logging.error("Gemini CLI execution timed out after 300 seconds.")
+             logging.error("Gemini CLI execution timed out after 900 seconds.")
              if process:
                   process.kill()
              return "Analysis Failed: Gemini CLI timed out."

@@ -17,7 +17,7 @@ FROM python:3.11-slim
 
 RUN pip install --no-cache-dir uv==0.6.12 semgrep && \
     apt-get update && \
-    apt-get install -y --no-install-recommends git nodejs npm curl ca-certificates && \
+    apt-get install -y --no-install-recommends git nodejs npm curl ca-certificates tokei && \
     curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin && \
     npm install -g node-gyp && \
     npm install -g @google/gemini-cli && \
