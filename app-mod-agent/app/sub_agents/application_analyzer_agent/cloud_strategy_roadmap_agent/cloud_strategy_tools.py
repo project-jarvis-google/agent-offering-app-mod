@@ -44,6 +44,23 @@ async def perform_cloud_strategy_analysis(tool_context: ToolContext) -> bool:
     else:
         tool_context.state["user_intent"] = "No specific user constraints or intent provided."
         
+    context_analysis = tool_context.state.get("context_analysis_result", "No context analysis captured.")
+    dependency_analysis = tool_context.state.get("dependency_analysis_result", "No dependency analysis captured.")
+    static_code_analysis = tool_context.state.get("static_code_analysis_result", "No static code analysis captured.")
+    
+    prompt += f"""
+    ### 🔬 Pre-computed Context Analysis:
+    {context_analysis}
+    
+    ### 🛡️ Pre-computed Dependency Analysis:
+    {dependency_analysis}
+    
+    ### 🔬 Pre-computed Static Code Analysis:
+    {static_code_analysis}
+    
+    Please leverage these comprehensive findings to synthesize your Google Cloud Modernization Roadmap. Focus entirely on architectural target recommendations and runbooks without re-analyzing raw boilerplate files.
+    """
+        
     result = await analyze_codebase_with_gemini(secure_temp_repo_dir, prompt)
 
     
