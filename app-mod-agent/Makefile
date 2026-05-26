@@ -54,6 +54,7 @@ backend-deploy:
 		--env-vars-file=./.env.prod.yaml \
 		--update-secrets=GEMINI_API_KEY=app-mod-agent-GEMINI-API-KEY:latest,DB_PASS=app-mod-session-svc-db-pass:latest,INGESTION_DB_PASS=iw-ingestion-svc-db-password:latest \
 		--memory "4Gi" \
+		--cpu "2" \
 		--project $$PROJECT_ID \
 		--region "us-central1" \
 		--labels "created-by=app-mod-agent" \
