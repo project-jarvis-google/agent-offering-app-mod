@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report_title }}</title>
+    <link rel="stylesheet" href="google_material.css">
+</head>
+<body>
+    <header class="title-page">
+        <h1>{{ report_title }}</h1>
+        <div class="metadata-banner">
+            {% for key, val in metadata_summary.items() %}
+                <span class="meta-item"><strong>{{ key|replace('_', ' ')|title }}:</strong> {{ val }}</span>
+            {% endfor %}
+        </div>
+    </header>
+
+    <main class="report-flow">
+        {% for block in content_blocks %}
+            
+            {% if block.block_type == 'section_header' %}
+                <h{{ block.heading_level | default(2) }} class="dynamic-heading">{{ block.title }}</h{{ block.heading_level | default(2) }}>
+            
+            {% elif block.block_type == 'paragraph' %}
+                <div class="body-text">{{ block.text | safe }}</div>
+            
+            {% elif block.block_type == 'bullet_list' %}
+                <ul class="clean-bullet-list">
+                    {% for item in block['items'] %}
+                        <li>{{ item | safe }}</li>
+                    {% endfor %}
+                </ul>
+            
+            {% elif block.block_type == 'numbered_list' %}
+                <ol class="clean-numbered-list">
+                    {% for item in block['items'] %}
+                        <li>{{ item | safe }}</li>
+                    {% endfor %}
+                </ol>
+            
+            {% elif block.block_type == 'callout_box' %}
+                <div class="callout-card {{ block.alert_type | default('info') }}">
+                    <div class="card-header">{{ block.title }}</div>
+                    <div class="card-body">{{ block.content | safe }}</div>
+                </div>
+            
+            {% elif block.block_type == 'dynamic_table' %}
+                <div class="table-wrapper">
+                    {% if block.table_title %}<div class="table-caption">{{ block.table_title }}</div>{% endif %}
+                    <table class="corporate-table">
+                        <thead>
+                            <tr>
+                                {% for header in block.headers %}
+                                    <th>{{ header }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in block.rows %}
+                                <tr>
+                                    {% for cell in row %}
+                                        <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            
+            {% elif block.block_type == 'architectural_diagram' %}
+                <div class="diagram-wrapper">
+                    <img src="{{ block.preprocessed_image_path }}" class="architecture-diagram" alt="Structural Architecture">
+                    {% if block.diagram_caption %}<div class="diagram-caption">{{ block.diagram_caption }}</div>{% endif %}
+                </div>
+            
+            {% elif block.block_type == 'code_diff' %}
+                <div class="diff-wrapper">
+                    <div class="diff-header">📄 {{ block.filename | default('Code Block') }}</div>
+                    <pre class="diff-code"><code>{{ block.diff_html | safe if block.diff_html else block.diff_string }}</code></pre>
+                </div>
+            
+            {% endif %}
+            
+        {% endfor %}
+    </main>
+</body>
+</html>
