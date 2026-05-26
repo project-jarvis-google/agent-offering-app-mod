@@ -1,0 +1,331 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;500&family=Roboto:wght@400;500;700&display=swap');
+
+@page {
+    size: A4 portrait;
+    margin: 25mm 20mm 25mm 20mm;
+    @top-left {
+        content: "Google Cloud | Application Modernization Evaluation";
+        font-family: "Google Sans", "Roboto", sans-serif;
+        font-size: 9pt;
+        color: #70757a;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: "Roboto", sans-serif;
+        font-size: 10pt;
+        color: #5f6368;
+    }
+    @bottom-left {
+        content: "Confidential - For Enterprise Client Review";
+        font-size: 8pt;
+        color: #9aa0a6;
+    }
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Google Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    line-height: 1.6;
+    color: #202124;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    font-size: 14px;
+}
+
+header.title-page {
+    margin-top: 10mm;
+    margin-bottom: 12mm;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 20px;
+}
+
+header.title-page h1 {
+    color: #1a73e8;
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.5px;
+}
+
+.metadata-banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    background-color: #f8f9fa;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.meta-item {
+    font-size: 13px;
+    color: #5f6368;
+}
+
+.meta-item strong {
+    color: #202124;
+}
+
+/* Typography Headings */
+h1.dynamic-heading {
+    color: #1a73e8;
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 32px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+    page-break-before: always;
+    page-break-after: avoid;
+}
+
+h2.dynamic-heading {
+    color: #188038;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 28px;
+    margin-bottom: 14px;
+    page-break-after: avoid;
+}
+
+h3.dynamic-heading {
+    color: #b06000;
+    font-size: 17px;
+    margin-top: 22px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+}
+
+p.body-text {
+    font-size: 14px;
+    color: #3c4043;
+    margin-top: 0;
+    margin-bottom: 14px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+ul.clean-bullet-list, ol.clean-numbered-list {
+    margin-top: 4px;
+    margin-bottom: 16px;
+    padding-left: 24px;
+    font-size: 14px;
+    color: #3c4043;
+}
+
+ul.clean-bullet-list li, ol.clean-numbered-list li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Callout Alert Cards */
+.callout-card {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 18px;
+    margin-bottom: 22px;
+    border-left: 4px solid #1a73e8;
+    background-color: #e8f0fe;
+    page-break-inside: avoid;
+}
+
+.callout-card.warning {
+    border-left-color: #f9ab00;
+    background-color: #fef7e0;
+}
+
+.callout-card.critical {
+    border-left-color: #d93025;
+    background-color: #fce8e6;
+}
+
+.callout-card.success {
+    border-left-color: #188038;
+    background-color: #e6f4ea;
+}
+
+.card-header {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: #202124;
+}
+
+.card-body {
+    font-size: 13.5px;
+    color: #3c4043;
+}
+
+.card-body p {
+    margin: 0 0 8px 0;
+}
+
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+.card-body ul, .card-body ol {
+    margin: 6px 0;
+    padding-left: 20px;
+}
+
+.card-body li {
+    margin-bottom: 6px;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+/* Responsive Table Wrapping Rules */
+.table-wrapper {
+    margin-top: 20px;
+    margin-bottom: 28px;
+}
+
+.table-caption {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a73e8;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+}
+
+table.corporate-table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table.corporate-table thead {
+    display: table-header-group;
+}
+
+table.corporate-table tr {
+    page-break-inside: avoid;
+}
+
+table.corporate-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+table.corporate-table th {
+    background-color: #f1f3f4;
+    color: #202124;
+    font-weight: 700;
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 13.5px;
+    border: 1px solid #dadce0;
+}
+
+table.corporate-table td {
+    border: 1px solid #dadce0;
+    padding: 10px 14px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-size: 13px;
+    vertical-align: top;
+    color: #3c4043;
+}
+
+/* Diagrams */
+.diagram-wrapper {
+    margin-top: 24px;
+    margin-bottom: 28px;
+    page-break-inside: avoid;
+}
+
+img.architecture-diagram {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 10px auto;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #ffffff;
+}
+
+.diagram-caption {
+    text-align: center;
+    font-size: 13px;
+    color: #5f6368;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* Code Diffs */
+.diff-wrapper {
+    margin-top: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    overflow: hidden;
+    page-break-inside: avoid;
+}
+
+.diff-header {
+    background-color: #f1f3f4;
+    padding: 10px 14px;
+    font-family: "Roboto Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #202124;
+    border-bottom: 1px solid #dadce0;
+}
+
+pre.diff-code {
+    margin: 0;
+    padding: 8px 0;
+    background-color: #f8f9fa;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+pre.diff-code code {
+    font-family: "Roboto Mono", Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    color: #24292f;
+}
+
+.diff-line {
+    padding: 2px 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+.diff-line.plus {
+    background-color: #dafbe1;
+    color: #116329;
+}
+
+.diff-line.minus {
+    background-color: #ffebe9;
+    color: #cf222e;
+}
+
+.diff-line.header {
+    color: #0969da;
+    background-color: #ddf4ff;
+    font-weight: 500;
+}
+
+.diff-line.regular {
+    color: #24292f;
+}

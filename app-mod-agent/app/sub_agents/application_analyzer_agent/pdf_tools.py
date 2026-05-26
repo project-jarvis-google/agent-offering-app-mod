@@ -3,201 +3,137 @@ import io
 import re
 import base64
 import requests
+import os
+import json
 from google.adk.tools import ToolContext
 from google.genai.types import Part, Blob
-from markdown_pdf import MarkdownPdf, Section
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML, CSS
+from markdown_it import MarkdownIt
 
-def process_mermaid(markdown_text: str) -> str:
+def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> bytes:
     """
-    Finds Mermaid blocks in markdown, fetches rendered images from mermaid.ink,
-    and replaces blocks with data URI images.
+    Polymorphically parses structured blocks, downloads raw diagram dependencies 
+    into temporary image assets, renders Jinja HTML, and compiles via WeasyPrint.
     """
-    logging.info("Processing Mermaid diagrams...")
-    pattern = re.compile(r"```mermaid\n(.*?)\n```", re.DOTALL)
-    matches = pattern.findall(markdown_text)
+    processed_blocks = []
+    temp_files_to_cleanup = []
+    md = MarkdownIt()
     
-    processed_text = markdown_text
-    for i, match in enumerate(matches):
-        code = match.strip()
-        # Encode to base64
-        encoded = base64.b64encode(code.encode('utf-8')).decode('utf-8')
-        url = f"https://mermaid.ink/img/{encoded}"
+    for i, block in enumerate(json_payload.get("content_blocks", [])):
+        b_type = block.get("block_type")
         
-        try:
-            logging.info("Fetching Mermaid image from %s", url)
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                # Convert to data URI
-                img_base64 = base64.b64encode(response.content).decode('utf-8')
-                data_uri = f"data:image/png;base64,{img_base64}"
-                # Replace in markdown
-                processed_text = processed_text.replace(f"```mermaid\n{match}\n```", f"![Mermaid Diagram]({data_uri})")
-                logging.info("Successfully replaced Mermaid block %d with image.", i+1)
-            else:
-                logging.warning("Failed to fetch Mermaid image from %s: %d", url, response.status_code)
-        except Exception as e:
-            logging.warning("Error fetching Mermaid image: %s", e)
+        if b_type == "architectural_diagram":
+            code = block.get("source_code", "").strip()
+            encoded = base64.b64encode(code.encode('utf-8')).decode('utf-8')
+            url = f"https://mermaid.ink/img/{encoded}"
             
-    return processed_text
+            img_path = f"/tmp/mermaid_diagram_{i}.png"
+            try:
+                r = requests.get(url, timeout=10)
+                if r.status_code == 200:
+                    with open(img_path, "wb") as f:
+                        f.write(r.content)
+                    block["preprocessed_image_path"] = img_path
+                    temp_files_to_cleanup.append(img_path)
+                else:
+                    block["block_type"] = "code_diff"
+                    block["filename"] = "Failed Diagram Render (Raw Code)"
+                    block["diff_string"] = code
+            except Exception:
+                block["block_type"] = "code_diff"
+                block["filename"] = "Failed Diagram Render (Raw Code)"
+                block["diff_string"] = code
+                
+        elif b_type in ["paragraph", "callout_box"]:
+            for key in ["text", "content"]:
+                if block.get(key):
+                    block[key] = md.render(str(block[key]))
+                    
+        elif b_type in ["bullet_list", "numbered_list"]:
+            items = block.get("items", [])
+            rendered_items = []
+            for item in items:
+                rendered_items.append(md.renderInline(str(item)))
+            block["items"] = rendered_items
+            
+                    
+        elif b_type == "code_diff":
+            raw_diff = block.get("diff_string", "")
+            diff_lines_html = []
+            for line in raw_diff.splitlines():
+                clean_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                if clean_line.startswith('+'):
+                    diff_lines_html.append(f'<div class="diff-line plus">{clean_line}</div>')
+                elif clean_line.startswith('-'):
+                    diff_lines_html.append(f'<div class="diff-line minus">{clean_line}</div>')
+                elif clean_line.startswith('@@'):
+                    diff_lines_html.append(f'<div class="diff-line header">{clean_line}</div>')
+                else:
+                    diff_lines_html.append(f'<div class="diff-line regular">{clean_line}</div>')
+            block["diff_html"] = "\n".join(diff_lines_html)
+            
+                    
+        processed_blocks.append(block)
+        
+    json_payload["content_blocks"] = processed_blocks
+    
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template("executive_report_template.html")
+    rendered_html = template.render(**json_payload)
+    
+    weasy_html = HTML(string=rendered_html, base_url=template_dir)
+    pdf_bytes = weasy_html.write_pdf(stylesheets=[CSS(os.path.join(template_dir, "google_material.css"))])
+    
+    for tmp in temp_files_to_cleanup:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+            
+    return pdf_bytes
 
 async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) -> bool:
     """
-    Converts a markdown report into a PDF report and saves it as an artifact.
+    Converts a structured assessment report into a publication-grade PDF artifact.
     """
-    logging.info("Converting markdown report to PDF...")
+    logging.info("Converting structured report findings to PDF...")
     
     try:
-        # 1. Preprocess Mermaid diagrams
-        processed_report = process_mermaid(report_content)
+        report_json = None
+        clean_text = report_content.strip()
+        if clean_text.startswith("```json"):
+            clean_text = clean_text[7:]
+            if clean_text.endswith("```"):
+                clean_text = clean_text[:-3]
+            clean_text = clean_text.strip()
         
-        # 2. Create PDF and add section with CSS
-        pdf = MarkdownPdf(toc_level=0)
-        
-        # Google-inspired CSS
-        google_css = """
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
-        * {
-            box-sizing: border-box;
-            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
-        }
-        body {
-            line-height: 1.6;
-            color: #3c4043;
-            margin: 0;
-            padding: 0;
-            width: 100%;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
-            page-break-after: avoid;
-            max-width: 100%;
-        }
-        h1 {
-            color: #1a73e8;
-            font-size: 26px;
-            border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 8px;
-            margin-top: 24px;
-        }
-        h2 {
-            color: #188038;
-            font-size: 20px;
-            margin-top: 20px;
-        }
-        h3 {
-            color: #f9ab00;
-            font-size: 18px;
-            margin-top: 18px;
-        }
-        h4 {
-            color: #d93025;
-            font-size: 16px;
-            margin-top: 16px;
-        }
-        p, li {
-            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            max-width: 100%;
-        }
-        code {
-            background-color: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Roboto Mono', 'Courier New', monospace;
-            font-size: 90%;
-            color: #d93025;
-            word-break: break-word;
-        }
-        pre {
-            background-color: #f8f9fa;
-            padding: 12px;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-all;
-            page-break-inside: avoid;
-            width: 100%;
-            max-width: 100%;
-        }
-        pre code {
-            color: #3c4043;
-            background-color: transparent;
-            padding: 0;
-            word-break: break-all;
-        }
-        table {
-            width: 100%;
-            max-width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
-            border-radius: 8px;
-            overflow: hidden;
-            table-layout: fixed;
-        }
-        th, td {
-            border: 1px solid #e0e0e0;
-            padding: 10px 12px;
-            text-align: left;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-word;
-            max-width: 100%;
-            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif;
-            font-size: 14px;
-        }
-        th {
-            background-color: #f1f3f4;
-            color: #202124;
-            font-weight: 700;
-        }
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        tr:hover {
-            background-color: #e8f0fe;
-        }
-        img {
-            max-width: 100%;
-            width: auto;
-            height: auto;
-            display: block;
-            margin: 16px auto;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            padding: 8px;
-            background-color: white;
-            page-break-inside: avoid;
-            box-sizing: border-box;
-        }
-        blockquote {
-            border-left: 4px solid #1a73e8;
-            background-color: #e8f0fe;
-            padding: 10px 16px;
-            margin: 16px 0;
-            border-radius: 0 4px 4px 0;
-            page-break-inside: avoid;
-            max-width: 100%;
-            word-wrap: break-word;
-        }
-        """
-        
-        pdf.add_section(Section(processed_report, paper_size=(400, 600)), user_css=google_css)
-        
-        # 3. Save to bytes
-        pdf_buffer = io.BytesIO()
-        pdf.save_bytes(pdf_buffer)
-        pdf_bytes = pdf_buffer.getvalue()
+        try:
+            report_json = json.loads(clean_text)
+        except Exception as json_err:
+            logging.info("Input content is not strict JSON (%s). Applying raw fallback schema wrapper...", json_err)
+            report_json = {
+                "report_title": "Application Modernization Assessment Report (Fallback Layout)",
+                "metadata_summary": {
+                    "evaluation_note": "Unformatted raw text recovery mode"
+                },
+                "content_blocks": [
+                    {
+                        "block_type": "paragraph",
+                        "text": report_content
+                    }
+                ]
+            }
+
+        template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../app/templates"))
+        if not os.path.exists(template_dir):
+            template_dir = "/code/app/templates"
+            
+        pdf_bytes = generate_pdf_from_dynamic_schema(report_json, template_dir)
         
         if not pdf_bytes:
             logging.error("Failed to generate PDF: bytes are empty")
             return False
             
-        # 4. Save as artifact
+        # Save as artifact
         artifact_name = "Application_Modernization_Assessment_Report.pdf"
         artifact_part = Part(
             inline_data=Blob(
