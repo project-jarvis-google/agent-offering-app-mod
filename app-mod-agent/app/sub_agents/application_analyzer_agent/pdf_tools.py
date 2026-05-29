@@ -5,11 +5,55 @@ import base64
 import requests
 import os
 import json
+import datetime
+from google.cloud import storage
 from google.adk.tools import ToolContext
 from google.genai.types import Part, Blob
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
 from markdown_it import MarkdownIt
+
+async def upload_report_copy_to_workspace(pdf_bytes: bytes, tool_context: ToolContext) -> bool:
+    """
+    Uploads a timestamped copy of the generated PDF assessment report to the GCS workspace
+    directory under 'assessment-reports/' to preserve lineage and prevent overwrites.
+    """
+    gcs_uri = tool_context.state.get("gcs_uri")
+    if not gcs_uri:
+        logging.warning("No gcs_uri found in state. Skipping upload to GCS workspace.")
+        return False
+        
+    try:
+        path_parts = gcs_uri.replace("gs://", "").split("/", 1)
+        bucket_name = path_parts[0]
+        base_prefix = path_parts[1] if len(path_parts) > 1 else ""
+        base_prefix = base_prefix.rstrip("/")
+        
+        for ext in [".zip", ".tar.gz", ".tgz", ".tar", ".bz2"]:
+            if base_prefix.lower().endswith(ext):
+                base_prefix = os.path.dirname(base_prefix).rstrip("/")
+                break
+        
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"appmod_assessment_report_{timestamp}.pdf"
+        
+        if base_prefix:
+            target_blob_name = f"{base_prefix}/assessment-reports/{filename}"
+        else:
+            target_blob_name = f"assessment-reports/{filename}"
+            
+        logging.info("Uploading copy of report to GCS workspace: gs://%s/%s", bucket_name, target_blob_name)
+        
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(target_blob_name)
+        blob.upload_from_string(pdf_bytes, content_type="application/pdf")
+        
+        logging.info("Successfully uploaded assessment report copy to GCS workspace.")
+        return True
+    except Exception as e:
+        logging.exception("Failed to upload assessment report to GCS workspace: %s", e)
+        return False
 
 def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> bytes:
     """
@@ -149,6 +193,9 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         )
         
         logging.info("PDF report saved as artifact: %s", artifact_name)
+        
+        await upload_report_copy_to_workspace(pdf_bytes, tool_context)
+        
         return True
         
     except Exception as e:

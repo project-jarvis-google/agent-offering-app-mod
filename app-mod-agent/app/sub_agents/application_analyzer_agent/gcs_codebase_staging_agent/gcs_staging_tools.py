@@ -70,6 +70,7 @@ async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolCont
 
             
             tool_context.state["secure_temp_repo_dir"] = secure_temp_repo_dir
+            tool_context.state["gcs_uri"] = gcs_uri
             return sourceCodeStored
 
         # Fallback to individual file downloading
@@ -90,6 +91,7 @@ async def fetch_source_code_from_gcs_folder(gcs_uri: str, tool_context: ToolCont
         sourceCodeStored = True
 
         tool_context.state["secure_temp_repo_dir"] = secure_temp_repo_dir
+        tool_context.state["gcs_uri"] = gcs_uri
 
     except Exception as e:
         logging.error("Exception occurred downloading from GCS: %s", e)
