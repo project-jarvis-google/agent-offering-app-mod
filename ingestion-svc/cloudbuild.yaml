@@ -1,0 +1,35 @@
+steps:
+  - name: 'ghcr.io/astral-sh/uv:debian'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make install
+        make lint
+    dir: 'ingestion-svc'
+    id: 'lint-and-typecheck'
+
+  - name: 'ghcr.io/astral-sh/uv:debian'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        make test
+    dir: 'ingestion-svc'
+    id: 'unit-tests'
+    waitFor:
+      - lint-and-typecheck
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        [[ "$BRANCH_NAME" == "main" ]] && make deploy || echo "Skipping deployment on non-main branch" && exit 0
+    dir: 'ingestion-svc'
+    id: 'deploy-service'
+    waitFor:
+      - unit-tests
+
+options:
+  logging: CLOUD_LOGGING_ONLY
