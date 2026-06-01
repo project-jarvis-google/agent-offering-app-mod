@@ -15,20 +15,33 @@ Initialize virtual environment and install dependencies:
 make install
 ```
 
-### 2. Local Development Run
+### 2. Environment Configuration
+
+Create your local `.env` file from the sample:
+```bash
+cp .env.sample .env
+```
+
+Configure the database for your preferred setup:
+- **SQLite Local Setup (Recommended / Simplest)**:
+  Set `LOCAL_TESTING="true"` in your `.env`. This uses a lightweight local `db.sqlite3` database so you do not need Cloud SQL or a proxy connection.
+- **GCP Cloud SQL Setup (Proxy)**:
+  Comment out or set `LOCAL_TESTING="false"`. You must run the Cloud SQL Auth Proxy locally on the Unix socket path specified in `INSTANCE_CONNECTION_NAME` for connections to succeed.
+
+### 3. Local Development Run
 Start the hot-reloading dev server:
 ```bash
 make dev
 ```
 The API docs will be available locally at `http://localhost:8080/docs`.
 
-### 3. Run Tests
+### 4. Run Tests
 Execute the automated test suite using the SQLite in-memory database:
 ```bash
 make test
 ```
 
-### 4. Code Linting & Type Checks
+### 5. Code Linting & Type Checks
 Run `ruff` formatter, linter, and `mypy` typechecker checks:
 ```bash
 make lint

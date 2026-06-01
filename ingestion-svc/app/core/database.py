@@ -8,7 +8,7 @@ from sqlalchemy.orm import declarative_base
 load_dotenv()
 
 if os.environ.get("LOCAL_TESTING", "false") == "true":
-    DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+    DATABASE_URL = "sqlite+aiosqlite:///db.sqlite3"
     engine = create_async_engine(
         DATABASE_URL, connect_args={"check_same_thread": False}, echo=True
     )
