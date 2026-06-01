@@ -1,4 +1,4 @@
-.PHONY: install dev test lint deploy
+.PHONY: install dev test lint deploy deploy-dev
 
 # Version variables
 UV_VERSION=0.6.12
@@ -36,3 +36,19 @@ deploy:
 		--labels "created-by=iw-ingestion-svc" \
 		--allow-unauthenticated \
 		--port 8080
+
+# Deploy the ingestion service to Google Cloud Run (Development Environment)
+deploy-dev:
+	PROJECT_ID=$$(gcloud config get-value project) && \
+	gcloud run deploy iw-ingestion-svc-dev \
+		--source . \
+		--env-vars-file=./.env.dev.yaml \
+		--update-secrets=DB_PASS=iw-ingestion-svc-dev-db-password:latest \
+		--memory "4Gi" \
+		--cpu "2" \
+		--project $$PROJECT_ID \
+		--region "us-central1" \
+		--labels "created-by=iw-ingestion-svc-dev" \
+		--allow-unauthenticated \
+		--port 8080
+

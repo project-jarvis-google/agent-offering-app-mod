@@ -25,7 +25,14 @@ steps:
     args:
       - '-c'
       - |
-        [[ "$BRANCH_NAME" == "main" ]] && make deploy || echo "Skipping deployment on non-main branch" && exit 0
+        if [[ "$BRANCH_NAME" == "main" ]]; then
+          make deploy
+        elif [[ "$BRANCH_NAME" == "dev" ]]; then
+          make deploy-dev
+        else
+          echo "Skipping deployment on non-eligible branch: $BRANCH_NAME"
+          exit 0
+        fi
     dir: 'ingestion-svc'
     id: 'deploy-service'
     waitFor:
