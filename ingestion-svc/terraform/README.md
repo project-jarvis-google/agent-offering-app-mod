@@ -76,7 +76,7 @@ terraform apply -var="project_id=<GCP_PROJECT_ID>"
 ### 2. Deploying the Production Environment
 Navigate to the prod environment folder:
 ```bash
-cd ../prod
+cd environments/prod
 ```
 
 Initialize Terraform:
