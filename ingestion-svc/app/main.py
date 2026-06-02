@@ -33,9 +33,10 @@ def custom_openapi():
         routes=app.routes,
     )
     # Add servers based on current environment
+    server_url = os.environ.get("SERVICE_URL", "/")
     openapi_schema["servers"] = [
         {
-            "url": "https://iw-ingestion-svc-428871167882.us-central1.run.app",
+            "url": server_url,
             "description": "AppMod Ingestion Service Server",
         },
     ]

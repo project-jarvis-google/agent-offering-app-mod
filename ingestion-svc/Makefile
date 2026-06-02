@@ -30,6 +30,7 @@ deploy:
 		--env-vars-file=./.env.prod.yaml \
 		--update-secrets=DB_PASS=iw-ingestion-svc-db-password:latest \
 		--service-account=iw-ingestion-svc-sa-prod@$$PROJECT_ID.iam.gserviceaccount.com \
+		--add-cloudsql-instances=$$PROJECT_ID:us-central1:iw-ingestion-svc-db \
 		--memory "4Gi" \
 		--cpu "2" \
 		--project $$PROJECT_ID \
@@ -46,6 +47,7 @@ deploy-dev:
 		--env-vars-file=./.env.dev.yaml \
 		--update-secrets=DB_PASS=iw-ingestion-svc-dev-db-password:latest \
 		--service-account=iw-ingestion-svc-sa-dev@$$PROJECT_ID.iam.gserviceaccount.com \
+		--add-cloudsql-instances=$$PROJECT_ID:us-central1:iw-ingestion-svc-db-dev \
 		--memory "4Gi" \
 		--cpu "2" \
 		--project $$PROJECT_ID \
