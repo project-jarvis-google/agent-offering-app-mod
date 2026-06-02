@@ -1,12 +1,15 @@
 import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from contextlib import asynccontextmanager
+
 from app.api.routes import ingest
-from app.core.database import engine, Base
+from app.core.database import Base, engine
 
 load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,9 +19,9 @@ async def lifespan(app: FastAPI):
     yield
     # We could also dispose of the engine here if needed
 
-app = FastAPI(
-    lifespan=lifespan
-)
+
+app = FastAPI(lifespan=lifespan)
+
 
 def custom_openapi():
     if app.openapi_schema:
@@ -30,11 +33,16 @@ def custom_openapi():
         routes=app.routes,
     )
     # Add servers based on current environment
+    server_url = os.environ.get("SERVICE_URL", "/")
     openapi_schema["servers"] = [
-        {"url": "https://iw-ingestion-svc-428871167882.us-central1.run.app", "description": "AppMod Ingestion Service Server"},
+        {
+            "url": server_url,
+            "description": "AppMod Ingestion Service Server",
+        },
     ]
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
 
 if os.environ.get("LOCAL_TESTING", "false") != "true":
     app.openapi = custom_openapi

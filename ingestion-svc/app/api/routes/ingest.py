@@ -1,24 +1,27 @@
-import asyncio
 import shutil
 import tempfile
 import uuid
+
 import requests
-from typing import List
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
-from sse_starlette.sse import EventSourceResponse
 
-from app.core.workspace_manager import WorkspaceManager
-from app.models.schemas import SourceResponse, IngestRequest, IngestResponse, CreateWorkspaceRequest, WorkspaceSchema, VerifyRepoRequest, VerifyRepoResponse
-from app.models.domain import IngestionSource, WorkspaceModel, IngestionStatus
-from app.core.database import get_db, AsyncSessionLocal
-from app.utils.parsers import parse_github_url, parse_gcs_url
-from app.services.github import download_github_repo
-from app.services.gcs import upload_directory_to_gcs
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.logger import get_logger
+from app.core.workspace_manager import WorkspaceManager
+from app.models.domain import IngestionSource, IngestionStatus
+from app.models.schemas import (
+    IngestRequest,
+    IngestResponse,
+    SourceResponse,
+    VerifyRepoRequest,
+    VerifyRepoResponse,
+)
+from app.services.gcs import upload_directory_to_gcs
+from app.services.github import download_github_repo
+from app.utils.parsers import parse_github_url
 
 logger = get_logger(__name__)
 
@@ -26,36 +29,47 @@ router = APIRouter(prefix="/app-mod", tags=["Workspaces"])
 
 workspace_manager = WorkspaceManager()
 
+
 async def background_ingestion_task(
     source_id: str,
     repo: str,
     owner: str,
     token: str | None,
     temp_dir: str,
-    gcs_destination_path: str
+    gcs_destination_path: str,
 ):
     try:
         # Create a completely new session for the background task
         async with AsyncSessionLocal() as db:
             # Update to IN_PROGRESS
-            result = await db.execute(select(IngestionSource).filter(IngestionSource.id == source_id))
+            result = await db.execute(
+                select(IngestionSource).filter(IngestionSource.id == source_id)
+            )
             source = result.scalars().first()
             if source:
                 source.status = IngestionStatus.PROCESSING
-                await db.commit()            
+                await db.commit()
 
             # Wrap synchronous network operations in threadpool so we don't block the event loop
             try:
                 # 1. Download and extract from GitHub
                 logger.info(f"[{source_id}] Downloading repository {owner}/{repo}...")
-                extracted_dir = await run_in_threadpool(download_github_repo, owner, repo, temp_dir, token)
-                
+                extracted_dir = await run_in_threadpool(
+                    download_github_repo, owner, repo, temp_dir, token
+                )
+
                 # 2. Upload to GCS
-                logger.info(f"[{source_id}] Uploading files to {gcs_destination_path}...")
-                files_uploaded = await run_in_threadpool(upload_directory_to_gcs, extracted_dir, gcs_destination_path)
-                
-                logger.info(f"[{source_id}] Successfully ingested {owner}/{repo}. {files_uploaded} files uploaded.")
-                
+                logger.info(
+                    f"[{source_id}] Uploading files to {gcs_destination_path}..."
+                )
+                files_uploaded = await run_in_threadpool(
+                    upload_directory_to_gcs, extracted_dir, gcs_destination_path
+                )
+
+                logger.info(
+                    f"[{source_id}] Successfully ingested {owner}/{repo}. {files_uploaded} files uploaded."
+                )
+
                 source.status = IngestionStatus.COMPLETED
                 await db.commit()
 
@@ -74,14 +88,21 @@ async def background_ingestion_task(
         logger.info(f"Cleaning up temporary directory: {temp_dir}")
         shutil.rmtree(temp_dir, ignore_errors=True)
 
+
 @router.post("/ingest", response_model=IngestResponse, status_code=status.HTTP_200_OK)
-async def ingest_repository(request: IngestRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def ingest_repository(
+    request: IngestRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Ingests a GitHub repository asynchronously and uploads its contents to a GCS bucket.
     """
     try:
-        logger.info(f"Received ingestion request for workspace id {request.workspace_id} for repo label: {request.source_label} and repo url: {request.source_value}")
-        
+        logger.info(
+            f"Received ingestion request for workspace id {request.workspace_id} for repo label: {request.source_label} and repo url: {request.source_value}"
+        )
+
         try:
             owner, repo = parse_github_url(request.source_value)
         except ValueError as e:
@@ -98,8 +119,8 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
             repo_url=request.source_value,
             gcs_destination_url=gcs_url,
             status=IngestionStatus.PENDING,
-            #TODO: Update size of repository
-            size=0
+            # TODO: Update size of repository
+            size=0,
         )
         db.add(new_codebase_source)
         await db.commit()
@@ -107,7 +128,7 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
 
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp(prefix=f"ingest_{repo}_")
-        
+
         # Enqueue background task
         background_tasks.add_task(
             background_ingestion_task,
@@ -116,13 +137,13 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
             owner=owner,
             token=request.token,
             temp_dir=temp_dir,
-            gcs_destination_path=gcs_url
+            gcs_destination_path=gcs_url,
         )
 
         return IngestResponse(
             ws_id=request.workspace_id,
             status="success",
-            message="Codebase ingestion queued successfully!"
+            message="Codebase ingestion queued successfully!",
         )
 
     except ValueError as e:
@@ -133,18 +154,22 @@ async def ingest_repository(request: IngestRequest, background_tasks: Background
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/workspaces/{workspace_id}/source_files", response_model=List[SourceResponse])
+@router.get(
+    "/workspaces/{workspace_id}/source_files", response_model=list[SourceResponse]
+)
 async def get_sources(workspace_id: str, db: AsyncSession = Depends(get_db)):
     """Returns all ingestion sources for a given user"""
     # TODO: Implement security check to ensure user owns workspace
     # ws = workspace_manager.get_workspace(db, workspace_id, current_user.id)
     # if not ws:
     #     raise HTTPException(status_code=404, detail="Workspace not found")
-    result = await db.execute(select(IngestionSource).filter(IngestionSource.workspace_id == workspace_id))
+    result = await db.execute(
+        select(IngestionSource).filter(IngestionSource.workspace_id == workspace_id)
+    )
     return result.scalars().all()
 
 
-#TODO: Implement source ingestion status streaming later 
+# TODO: Implement source ingestion status streaming later
 # async def ingest_status_generator(request: Request, source_id: uuid.UUID):
 #     while True:
 #         if await request.is_disconnected():
@@ -169,7 +194,7 @@ async def get_sources(workspace_id: str, db: AsyncSession = Depends(get_db)):
 
 #             if source.status in ("SUCCESS", "FAILED"):
 #                 break
-        
+
 #         await asyncio.sleep(2) # Poll every 2 seconds
 
 
@@ -185,16 +210,14 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
     Verifies if a GitHub repository is accessible.
     """
     logger.info(f"Received verification request for GitHub URL: {request.source_value}")
-    
+
     try:
         owner, repo = parse_github_url(request.source_value)
     except ValueError as e:
         logger.error(f"Invalid GitHub URL: {e}")
         response.status_code = status.HTTP_400_BAD_REQUEST
         return VerifyRepoResponse(
-            status="error",
-            message="Invalid GitHub URL",
-            error_details=str(e)
+            status="error", message="Invalid GitHub URL", error_details=str(e)
         )
 
     url = f"https://api.github.com/repos/{owner}/{repo}"
@@ -205,35 +228,40 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
 
     try:
         logger.info(f"Sending request to GitHub API for repository: {owner}/{repo}")
-        github_response = await run_in_threadpool(requests.get, url, headers=headers, timeout=10)
-        
+        github_response = await run_in_threadpool(
+            requests.get, url, headers=headers, timeout=10
+        )
+
         if github_response.status_code == 200:
             logger.info(f"Successfully verified access for {owner}/{repo}")
-            return VerifyRepoResponse(
-                message="Repository is accessible."
-            )
-            
-        logger.error(f"Failed to verify access for {owner}/{repo}: {github_response.status_code} {github_response.text}")
+            return VerifyRepoResponse(message="Repository is accessible.")
+
+        logger.error(
+            f"Failed to verify access for {owner}/{repo}: {github_response.status_code} {github_response.text}"
+        )
         response.status_code = github_response.status_code
-        
+
         if request.token:
             return VerifyRepoResponse(
                 message="Repository access failed with the provided PAT token.",
-                error_details=github_response.text
+                error_details=github_response.text,
             )
         else:
             return VerifyRepoResponse(
                 message="Repository not found or possibly private. Please try providing a PAT token.",
-                error_details=github_response.text
+                error_details=github_response.text,
             )
 
     except Exception as e:
-        logger.exception(f"Unexpected error during verification of {request.source_value}: {e}")
+        logger.exception(
+            f"Unexpected error during verification of {request.source_value}: {e}"
+        )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return VerifyRepoResponse(
             message="An unexpected error occurred during verification.",
-            error_details=str(e)
+            error_details=str(e),
         )
+
 
 @router.get("/health")
 async def health_check():
