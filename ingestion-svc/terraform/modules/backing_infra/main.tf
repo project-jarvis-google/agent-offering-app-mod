@@ -41,12 +41,6 @@ resource "google_sql_database_instance" "db_instance" {
   deletion_protection = var.environment == "prod" ? true : false
 }
 
-resource "google_sql_database" "postgres_db" {
-  name     = "postgres"
-  instance = google_sql_database_instance.db_instance.name
-  project  = var.project_id
-}
-
 resource "google_sql_user" "postgres_user" {
   name     = "postgres"
   instance = google_sql_database_instance.db_instance.name
