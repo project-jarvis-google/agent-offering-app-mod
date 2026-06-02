@@ -37,6 +37,8 @@ deploy:
 		--region "us-central1" \
 		--labels "created-by=iw-ingestion-svc" \
 		--allow-unauthenticated \
+		--min-instances 1 \
+		--no-cpu-throttling \
 		--port 8080
 
 # Deploy the ingestion service to Google Cloud Run (Development Environment)
@@ -54,5 +56,7 @@ deploy-dev:
 		--region "us-central1" \
 		--labels "created-by=iw-ingestion-svc-dev" \
 		--allow-unauthenticated \
+		--min-instances 1 \
+		--no-cpu-throttling \
 		--port 8080
 
