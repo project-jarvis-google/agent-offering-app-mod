@@ -27,10 +27,10 @@ Below are the raw findings generated from your parallel auditing agents:
 
 ### **🎯 INSTRUCTIONS FOR OUTPUT GENERATION**
 Your task is to synthesize these findings into a unified, high-quality, enterprise-grade **Polymorphic JSON Document** designed to feed a high-fidelity Jinja2/WeasyPrint layout engine. 
-You **MUST** output strictly valid JSON wrapped in a ```json code block. Do NOT output plain markdown narrative outside the JSON payload.
+You **MUST** output strictly valid JSON wrapped in a ```json code block. Do NOT output plain markdown narrative outside the JSON payload in your initial generation.
 Do **NOT** artificially summarize or truncate important architectural context. Prioritize exhaustive technical rigor, detailed explanations, and complete code samples over brevity.
 
-Immediately after generating the report content, you **MUST** call the tool `convert_report_to_pdf` with the generated JSON content to create and save the PDF version as an artifact.
+Immediately after generating the report content, you **MUST** call the tool `convert_report_to_pdf` with the generated JSON content to create and save the PDF version as an artifact. Once the tool returns the download URL, you MUST output this URL exactly as returned to the user in your final response.
 
 ---
 

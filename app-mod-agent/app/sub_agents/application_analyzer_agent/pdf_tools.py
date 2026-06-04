@@ -1,59 +1,70 @@
-import logging
-import io
-import re
 import base64
-import requests
-import os
-import json
 import datetime
-from google.cloud import storage
-from google.adk.tools import ToolContext
-from google.genai.types import Part, Blob
-from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML, CSS
-from markdown_it import MarkdownIt
+import json
+import logging
+import os
 
-async def upload_report_copy_to_workspace(pdf_bytes: bytes, tool_context: ToolContext) -> bool:
+import requests
+from google.adk.tools import ToolContext
+from google.cloud import storage
+from jinja2 import Environment, FileSystemLoader
+from markdown_it import MarkdownIt
+from weasyprint import CSS, HTML
+
+
+async def upload_report_copy_to_workspace(pdf_bytes: bytes, tool_context: ToolContext) -> str | None:
     """
     Uploads a timestamped copy of the generated PDF assessment report to the GCS workspace
     directory under 'assessment-reports/' to preserve lineage and prevent overwrites.
+    Returns the signed URL (or authenticated URL fallback) of the uploaded PDF.
     """
     gcs_uri = tool_context.state.get("gcs_uri")
     if not gcs_uri:
         logging.warning("No gcs_uri found in state. Skipping upload to GCS workspace.")
-        return False
-        
+        return None
+
     try:
         path_parts = gcs_uri.replace("gs://", "").split("/", 1)
         bucket_name = path_parts[0]
         base_prefix = path_parts[1] if len(path_parts) > 1 else ""
         base_prefix = base_prefix.rstrip("/")
-        
+
         for ext in [".zip", ".tar.gz", ".tgz", ".tar", ".bz2"]:
             if base_prefix.lower().endswith(ext):
                 base_prefix = os.path.dirname(base_prefix).rstrip("/")
                 break
-        
+
         timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"appmod_assessment_report_{timestamp}.pdf"
-        
+
         if base_prefix:
             target_blob_name = f"{base_prefix}/assessment-reports/{filename}"
         else:
             target_blob_name = f"assessment-reports/{filename}"
-            
+
         logging.info("Uploading copy of report to GCS workspace: gs://%s/%s", bucket_name, target_blob_name)
-        
+
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(target_blob_name)
         blob.upload_from_string(pdf_bytes, content_type="application/pdf")
-        
+
         logging.info("Successfully uploaded assessment report copy to GCS workspace.")
-        return True
+
+        try:
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=datetime.timedelta(hours=24),
+                method="GET"
+            )
+            return signed_url
+        except Exception as sign_err:
+            logging.warning("Failed to generate GCS signed URL: %s. Falling back to authenticated storage URL.", sign_err)
+            return f"https://storage.cloud.google.com/{bucket_name}/{target_blob_name}"
+
     except Exception as e:
         logging.exception("Failed to upload assessment report to GCS workspace: %s", e)
-        return False
+        return None
 
 def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> bytes:
     """
@@ -63,15 +74,15 @@ def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> b
     processed_blocks = []
     temp_files_to_cleanup = []
     md = MarkdownIt()
-    
+
     for i, block in enumerate(json_payload.get("content_blocks", [])):
         b_type = block.get("block_type")
-        
+
         if b_type == "architectural_diagram":
             code = block.get("source_code", "").strip()
             encoded = base64.b64encode(code.encode('utf-8')).decode('utf-8')
             url = f"https://mermaid.ink/img/{encoded}"
-            
+
             img_path = f"/tmp/mermaid_diagram_{i}.png"
             try:
                 r = requests.get(url, timeout=10)
@@ -88,20 +99,20 @@ def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> b
                 block["block_type"] = "code_diff"
                 block["filename"] = "Failed Diagram Render (Raw Code)"
                 block["diff_string"] = code
-                
+
         elif b_type in ["paragraph", "callout_box"]:
             for key in ["text", "content"]:
                 if block.get(key):
                     block[key] = md.render(str(block[key]))
-                    
+
         elif b_type in ["bullet_list", "numbered_list"]:
             items = block.get("items", [])
             rendered_items = []
             for item in items:
                 rendered_items.append(md.renderInline(str(item)))
             block["items"] = rendered_items
-            
-                    
+
+
         elif b_type == "code_diff":
             raw_diff = block.get("diff_string", "")
             diff_lines_html = []
@@ -116,31 +127,31 @@ def generate_pdf_from_dynamic_schema(json_payload: dict, template_dir: str) -> b
                 else:
                     diff_lines_html.append(f'<div class="diff-line regular">{clean_line}</div>')
             block["diff_html"] = "\n".join(diff_lines_html)
-            
-                    
+
+
         processed_blocks.append(block)
-        
+
     json_payload["content_blocks"] = processed_blocks
-    
+
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("executive_report_template.html")
     rendered_html = template.render(**json_payload)
-    
+
     weasy_html = HTML(string=rendered_html, base_url=template_dir)
     pdf_bytes = weasy_html.write_pdf(stylesheets=[CSS(os.path.join(template_dir, "google_material.css"))])
-    
+
     for tmp in temp_files_to_cleanup:
         if os.path.exists(tmp):
             os.remove(tmp)
-            
+
     return pdf_bytes
 
-async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) -> bool:
+async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) -> str:
     """
     Converts a structured assessment report into a publication-grade PDF artifact.
     """
     logging.info("Converting structured report findings to PDF...")
-    
+
     try:
         report_json = None
         clean_text = report_content.strip()
@@ -149,7 +160,7 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
             if clean_text.endswith("```"):
                 clean_text = clean_text[:-3]
             clean_text = clean_text.strip()
-        
+
         try:
             report_json = json.loads(clean_text)
         except Exception as json_err:
@@ -170,34 +181,21 @@ async def convert_report_to_pdf(report_content: str, tool_context: ToolContext) 
         template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../app/templates"))
         if not os.path.exists(template_dir):
             template_dir = "/code/app/templates"
-            
+
         pdf_bytes = generate_pdf_from_dynamic_schema(report_json, template_dir)
-        
+
         if not pdf_bytes:
             logging.error("Failed to generate PDF: bytes are empty")
-            return False
-            
-        # Save as artifact
-        artifact_name = "Application_Modernization_Assessment_Report.pdf"
-        artifact_part = Part(
-            inline_data=Blob(
-                data=pdf_bytes,
-                mime_type="application/pdf",
-                display_name=artifact_name
-            )
-        )
-        
-        await tool_context.save_artifact(
-            filename=artifact_name,
-            artifact=artifact_part
-        )
-        
-        logging.info("PDF report saved as artifact: %s", artifact_name)
-        
-        await upload_report_copy_to_workspace(pdf_bytes, tool_context)
-        
-        return True
-        
+            return "Failed to generate PDF report: bytes are empty."
+
+        report_url = await upload_report_copy_to_workspace(pdf_bytes, tool_context)
+        if report_url:
+            logging.info("PDF report saved as artifact in GCS Workspace. URL: %s", report_url)
+            return f"Report PDF converted and uploaded successfully. Download URL: {report_url}"
+        else:
+            logging.error("Failed to upload PDF report to GCS Workspace")
+            return "PDF report generated successfully, but failed to upload copy to GCS Workspace."
+
     except Exception as e:
         logging.exception("Error during PDF conversion: %s", e)
-        return False
+        return f"Error during PDF conversion: {e}"
