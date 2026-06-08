@@ -37,6 +37,14 @@ def test_parse_github_url_valid():
     assert owner == "google"
     assert repo == "guava"
 
+    owner, repo = parse_github_url("https://github.com/github-samples/pets-workshop")
+    assert owner == "github-samples"
+    assert repo == "pets-workshop"
+
+    owner, repo = parse_github_url("https://github.com/github-samples/pets-workshop.git")
+    assert owner == "github-samples"
+    assert repo == "pets-workshop"
+
 
 def test_parse_github_url_invalid():
     with pytest.raises(ValueError):
@@ -56,6 +64,18 @@ def test_parse_gitlab_url_valid():
     assert full_path == "owner/subgroup/repo"
     assert repo == "repo"
 
+    full_path, repo = parse_gitlab_url(
+        "https://gitlab.com/gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    )
+    assert full_path == "gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    assert repo == "mission-control"
+
+    full_path, repo = parse_gitlab_url(
+        "https://gitlab.com/gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control.git"
+    )
+    assert full_path == "gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    assert repo == "mission-control"
+
 
 def test_parse_gitlab_url_invalid():
     with pytest.raises(ValueError):
@@ -73,6 +93,12 @@ def test_parse_bitbucket_url_valid():
 
     workspace, repo = parse_bitbucket_url(
         "https://bitbucket.org/atlassian_tutorial/helloworld/src/master/"
+    )
+    assert workspace == "atlassian_tutorial"
+    assert repo == "helloworld"
+
+    workspace, repo = parse_bitbucket_url(
+        "https://bitbucket.org/atlassian_tutorial/helloworld.git"
     )
     assert workspace == "atlassian_tutorial"
     assert repo == "helloworld"
