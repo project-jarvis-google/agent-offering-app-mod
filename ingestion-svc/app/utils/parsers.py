@@ -2,42 +2,61 @@ import re
 
 
 def parse_github_url(url: str) -> tuple[str, str]:
-    """Parses a GitHub URL into owner and repo."""
-    # Matches https://github.com/owner/repo or https://github.com/owner/repo.git
-    pattern = r"https?://github\.com/([^/]+)/([^/.]+?)(?:\.git|/)?$"
-    match = re.search(pattern, url)
+    """Parses a GitHub URL into owner and repo, ignoring trailing browser segments."""
+    pattern = r"https?://(?:www\.)?github\.com/([^/]+)/([^/]+)"
+    match = re.match(pattern, url)
     if not match:
         raise ValueError(
             "Invalid GitHub URL format. Expected: https://github.com/owner/repo"
         )
-    return match.group(1), match.group(2)
+    owner = match.group(1)
+    repo = match.group(2)
+
+    # Strip trailing .git if present
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+
+    return owner, repo
 
 
 def parse_gitlab_url(url: str) -> tuple[str, str]:
-    """Parses a GitLab URL into full path (owner/subgroups/repo) and repo name."""
-    # Matches https://gitlab.com/owner/repo or https://gitlab.com/owner/subgroup/repo
-    # The path can have multiple segments (subgroups)
-    pattern = r"https?://gitlab\.com/(.+)/([^/.]+?)(?:\.git|/)?$"
-    match = re.search(pattern, url)
+    """Parses a GitLab URL into full path (owner/subgroups/repo) and repo name, ignoring trailing browser segments."""
+    # Discard trailing browser segments (everything after /-/ )
+    base_url = url.split("/-/", 1)[0]
+
+    pattern = r"https?://(?:www\.)?gitlab\.com/(.+)/([^/]+)$"
+    match = re.match(pattern, base_url.rstrip("/"))
     if not match:
         raise ValueError(
-            "Invalid GitLab URL format. Expected: https://gitlab.com/owner/repo or https://gitlab.com/owner/subgroup/repo"
+            "Invalid GitLab URL format. Expected: https://gitlab.com/owner/repo"
         )
+
     full_path = f"{match.group(1)}/{match.group(2)}"
     repo_name = match.group(2)
+
+    if repo_name.endswith(".git"):
+        repo_name = repo_name[:-4]
+        if full_path.endswith(".git"):
+            full_path = full_path[:-4]
+
     return full_path, repo_name
 
 
 def parse_bitbucket_url(url: str) -> tuple[str, str]:
-    """Parses a Bitbucket URL into workspace and repo."""
-    # Matches https://bitbucket.org/workspace/repo or https://bitbucket.org/workspace/repo.git
-    pattern = r"https?://bitbucket\.org/([^/]+)/([^/.]+?)(?:\.git|/)?$"
-    match = re.search(pattern, url)
+    """Parses a Bitbucket URL into workspace and repo, ignoring trailing browser segments."""
+    pattern = r"https?://(?:www\.)?bitbucket\.org/([^/]+)/([^/]+)"
+    match = re.match(pattern, url)
     if not match:
         raise ValueError(
             "Invalid Bitbucket URL format. Expected: https://bitbucket.org/workspace/repo"
         )
-    return match.group(1), match.group(2)
+    workspace = match.group(1)
+    repo = match.group(2)
+
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+
+    return workspace, repo
 
 
 def parse_gcs_url(url: str) -> tuple[str, str]:

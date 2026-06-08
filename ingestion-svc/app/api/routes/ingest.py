@@ -122,18 +122,24 @@ async def ingest_repository(
         )
 
         try:
-            if "github.com" in request.source_value:
+            if request.source_type == "github":
+                if "github.com" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'github'.")
                 _, repo = parse_github_url(request.source_value)
-            elif "gitlab.com" in request.source_value:
+            elif request.source_type == "gitlab":
+                if "gitlab.com" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'gitlab'.")
                 _, repo = parse_gitlab_url(request.source_value)
-            elif "bitbucket.org" in request.source_value:
+            elif request.source_type == "bitbucket":
+                if "bitbucket.org" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'bitbucket'.")
                 _, repo = parse_bitbucket_url(request.source_value)
             else:
                 raise ValueError(
-                    "Unsupported repository URL. Supported platforms: GitHub, GitLab, Bitbucket."
+                    f"Unsupported source type: {request.source_type}"
                 )
         except ValueError as e:
-            logger.error(f"Invalid repository URL: {e}")
+            logger.error(f"Invalid repository URL or source type mismatch: {e}")
             raise
 
         gcs_url = workspace_manager.get_workspace_path(request.workspace_id)
@@ -241,7 +247,14 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
     headers = {"Accept": "application/json"}
     auth = None
 
-    if "github.com" in request.source_value:
+    if request.source_type == "github":
+        if "github.com" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'github'",
+                error_details="Expected a github.com URL"
+            )
         try:
             owner, repo = parse_github_url(request.source_value)
         except ValueError as e:
@@ -255,7 +268,14 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
         if request.token:
             headers["Authorization"] = f"token {request.token}"
 
-    elif "gitlab.com" in request.source_value:
+    elif request.source_type == "gitlab":
+        if "gitlab.com" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'gitlab'",
+                error_details="Expected a gitlab.com URL"
+            )
         try:
             full_path, repo = parse_gitlab_url(request.source_value)
         except ValueError as e:
@@ -269,7 +289,14 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
         if request.token:
             headers["PRIVATE-TOKEN"] = request.token
 
-    elif "bitbucket.org" in request.source_value:
+    elif request.source_type == "bitbucket":
+        if "bitbucket.org" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'bitbucket'",
+                error_details="Expected a bitbucket.org URL"
+            )
         try:
             workspace, repo = parse_bitbucket_url(request.source_value)
         except ValueError as e:
@@ -286,7 +313,7 @@ async def verify_repo_access(request: VerifyRepoRequest, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return VerifyRepoResponse(
             status="error",
-            message="Unsupported repository URL. Supported platforms: GitHub, GitLab, Bitbucket.",
+            message=f"Unsupported source type: {request.source_type}",
         )
 
     try:

@@ -33,6 +33,10 @@ def test_parse_github_url_valid():
     assert owner == "kubernetes"
     assert repo == "kubernetes"
 
+    owner, repo = parse_github_url("https://github.com/google/guava/tree/master")
+    assert owner == "google"
+    assert repo == "guava"
+
 
 def test_parse_github_url_invalid():
     with pytest.raises(ValueError):
@@ -46,6 +50,10 @@ def test_parse_gitlab_url_valid():
 
     full_path, repo = parse_gitlab_url("https://gitlab.com/owner/subgroup/subgroup2/repo.git")
     assert full_path == "owner/subgroup/subgroup2/repo"
+    assert repo == "repo"
+
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/subgroup/repo/-/tree/master")
+    assert full_path == "owner/subgroup/repo"
     assert repo == "repo"
 
 
@@ -62,6 +70,12 @@ def test_parse_bitbucket_url_valid():
     workspace, repo = parse_bitbucket_url("https://bitbucket.org/workspace/repo.git")
     assert workspace == "workspace"
     assert repo == "repo"
+
+    workspace, repo = parse_bitbucket_url(
+        "https://bitbucket.org/atlassian_tutorial/helloworld/src/master/"
+    )
+    assert workspace == "atlassian_tutorial"
+    assert repo == "helloworld"
 
 
 def test_parse_bitbucket_url_invalid():
@@ -128,4 +142,19 @@ def test_ingest_endpoint_invalid_url(client):
         },
     )
     assert response.status_code == 400
-    assert "Unsupported repository URL" in response.json()["detail"]
+    assert "Repository URL does not match source type" in response.json()["detail"]
+
+
+def test_ingest_endpoint_source_type_mismatch(client):
+    response = client.post(
+        "/app-mod/ingest",
+        json={
+            "workspace_id": "ws-12345",
+            "source_type": "github",
+            "source_value": "https://gitlab.com/owner/repo",
+            "source_label": "test-repo",
+        },
+    )
+    assert response.status_code == 400
+    assert "Repository URL does not match source type" in response.json()["detail"]
+
