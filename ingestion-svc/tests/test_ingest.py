@@ -4,7 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.utils.parsers import parse_gcs_url, parse_github_url
+from app.utils.parsers import (
+    parse_bitbucket_url,
+    parse_gcs_url,
+    parse_github_url,
+    parse_gitlab_url,
+)
 
 
 @pytest.fixture
@@ -32,6 +37,36 @@ def test_parse_github_url_valid():
 def test_parse_github_url_invalid():
     with pytest.raises(ValueError):
         parse_github_url("https://gitlab.com/owner/repo")
+
+
+def test_parse_gitlab_url_valid():
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/repo")
+    assert full_path == "owner/repo"
+    assert repo == "repo"
+
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/subgroup/subgroup2/repo.git")
+    assert full_path == "owner/subgroup/subgroup2/repo"
+    assert repo == "repo"
+
+
+def test_parse_gitlab_url_invalid():
+    with pytest.raises(ValueError):
+        parse_gitlab_url("https://github.com/owner/repo")
+
+
+def test_parse_bitbucket_url_valid():
+    workspace, repo = parse_bitbucket_url("https://bitbucket.org/workspace/repo")
+    assert workspace == "workspace"
+    assert repo == "repo"
+
+    workspace, repo = parse_bitbucket_url("https://bitbucket.org/workspace/repo.git")
+    assert workspace == "workspace"
+    assert repo == "repo"
+
+
+def test_parse_bitbucket_url_invalid():
+    with pytest.raises(ValueError):
+        parse_bitbucket_url("https://github.com/owner/repo")
 
 
 def test_parse_gcs_url_valid():
@@ -82,7 +117,7 @@ def test_ingest_endpoint_success(mock_upload, mock_download, client):
     mock_upload.assert_called_once_with("/tmp/fake_dir", ANY)
 
 
-def test_ingest_endpoint_invalid_github_url(client):
+def test_ingest_endpoint_invalid_url(client):
     response = client.post(
         "/app-mod/ingest",
         json={
@@ -93,4 +128,4 @@ def test_ingest_endpoint_invalid_github_url(client):
         },
     )
     assert response.status_code == 400
-    assert "Invalid GitHub URL" in response.json()["detail"]
+    assert "Unsupported repository URL" in response.json()["detail"]
