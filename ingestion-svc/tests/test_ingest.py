@@ -4,7 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.utils.parsers import parse_gcs_url, parse_github_url
+from app.utils.parsers import (
+    parse_bitbucket_url,
+    parse_gcs_url,
+    parse_github_url,
+    parse_gitlab_url,
+)
 
 
 @pytest.fixture
@@ -28,10 +33,80 @@ def test_parse_github_url_valid():
     assert owner == "kubernetes"
     assert repo == "kubernetes"
 
+    owner, repo = parse_github_url("https://github.com/google/guava/tree/master")
+    assert owner == "google"
+    assert repo == "guava"
+
+    owner, repo = parse_github_url("https://github.com/github-samples/pets-workshop")
+    assert owner == "github-samples"
+    assert repo == "pets-workshop"
+
+    owner, repo = parse_github_url("https://github.com/github-samples/pets-workshop.git")
+    assert owner == "github-samples"
+    assert repo == "pets-workshop"
+
 
 def test_parse_github_url_invalid():
     with pytest.raises(ValueError):
         parse_github_url("https://gitlab.com/owner/repo")
+
+
+def test_parse_gitlab_url_valid():
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/repo")
+    assert full_path == "owner/repo"
+    assert repo == "repo"
+
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/subgroup/subgroup2/repo.git")
+    assert full_path == "owner/subgroup/subgroup2/repo"
+    assert repo == "repo"
+
+    full_path, repo = parse_gitlab_url("https://gitlab.com/owner/subgroup/repo/-/tree/master")
+    assert full_path == "owner/subgroup/repo"
+    assert repo == "repo"
+
+    full_path, repo = parse_gitlab_url(
+        "https://gitlab.com/gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    )
+    assert full_path == "gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    assert repo == "mission-control"
+
+    full_path, repo = parse_gitlab_url(
+        "https://gitlab.com/gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control.git"
+    )
+    assert full_path == "gitlab-examples/wayne-enterprises/wayne-aerospace/mission-control"
+    assert repo == "mission-control"
+
+
+def test_parse_gitlab_url_invalid():
+    with pytest.raises(ValueError):
+        parse_gitlab_url("https://github.com/owner/repo")
+
+
+def test_parse_bitbucket_url_valid():
+    workspace, repo = parse_bitbucket_url("https://bitbucket.org/workspace/repo")
+    assert workspace == "workspace"
+    assert repo == "repo"
+
+    workspace, repo = parse_bitbucket_url("https://bitbucket.org/workspace/repo.git")
+    assert workspace == "workspace"
+    assert repo == "repo"
+
+    workspace, repo = parse_bitbucket_url(
+        "https://bitbucket.org/atlassian_tutorial/helloworld/src/master/"
+    )
+    assert workspace == "atlassian_tutorial"
+    assert repo == "helloworld"
+
+    workspace, repo = parse_bitbucket_url(
+        "https://bitbucket.org/atlassian_tutorial/helloworld.git"
+    )
+    assert workspace == "atlassian_tutorial"
+    assert repo == "helloworld"
+
+
+def test_parse_bitbucket_url_invalid():
+    with pytest.raises(ValueError):
+        parse_bitbucket_url("https://github.com/owner/repo")
 
 
 def test_parse_gcs_url_valid():
@@ -82,7 +157,7 @@ def test_ingest_endpoint_success(mock_upload, mock_download, client):
     mock_upload.assert_called_once_with("/tmp/fake_dir", ANY)
 
 
-def test_ingest_endpoint_invalid_github_url(client):
+def test_ingest_endpoint_invalid_url(client):
     response = client.post(
         "/app-mod/ingest",
         json={
@@ -93,4 +168,19 @@ def test_ingest_endpoint_invalid_github_url(client):
         },
     )
     assert response.status_code == 400
-    assert "Invalid GitHub URL" in response.json()["detail"]
+    assert "Repository URL does not match source type" in response.json()["detail"]
+
+
+def test_ingest_endpoint_source_type_mismatch(client):
+    response = client.post(
+        "/app-mod/ingest",
+        json={
+            "workspace_id": "ws-12345",
+            "source_type": "github",
+            "source_value": "https://gitlab.com/owner/repo",
+            "source_label": "test-repo",
+        },
+    )
+    assert response.status_code == 400
+    assert "Repository URL does not match source type" in response.json()["detail"]
+

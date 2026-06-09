@@ -39,13 +39,13 @@ class IngestRequest(BaseModel):
     workspace_id: str = Field(
         ..., description="The ID of the user triggering ingestion"
     )
-    source_type: Literal["github"] = Field(
+    source_type: Literal["github", "gitlab", "bitbucket"] = Field(
         "github", description="Type of the source data to be ingested"
     )
     source_value: str = Field(
-        ..., description="GitHub repository URL (e.g., https://github.com/owner/repo)"
+        ..., description="GitHub, GitLab, or Bitbucket repository URL"
     )
-    token: str | None = Field(None, description="Optional GitHub Private Access Token")
+    token: str | None = Field(None, description="Optional Private Access Token")
     source_label: str | None = Field(
         None, description="Label for the application/service"
     )
@@ -79,11 +79,11 @@ class SourceResponse(BaseModel):
 
 
 class VerifyRepoRequest(BaseModel):
-    source_type: Literal["github"] = Field(
+    source_type: Literal["github", "gitlab", "bitbucket"] = Field(
         "github", description="Type of the source data to be ingested"
     )
-    source_value: str = Field(..., description="GitHub repository URL")
-    token: str | None = Field(None, description="Optional GitHub Private Access Token")
+    source_value: str = Field(..., description="GitHub, GitLab, or Bitbucket repository URL")
+    token: str | None = Field(None, description="Optional Private Access Token")
 
 
 class VerifyRepoResponse(BaseModel):

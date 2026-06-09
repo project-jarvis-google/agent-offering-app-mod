@@ -19,9 +19,12 @@ from app.models.schemas import (
     VerifyRepoRequest,
     VerifyRepoResponse,
 )
+import urllib.parse
 from app.services.gcs import upload_directory_to_gcs
 from app.services.github import download_github_repo
-from app.utils.parsers import parse_github_url
+from app.services.gitlab import download_gitlab_repo
+from app.services.bitbucket import download_bitbucket_repo
+from app.utils.parsers import parse_github_url, parse_gitlab_url, parse_bitbucket_url
 
 logger = get_logger(__name__)
 
@@ -32,8 +35,7 @@ workspace_manager = WorkspaceManager()
 
 async def background_ingestion_task(
     source_id: str,
-    repo: str,
-    owner: str,
+    source_value: str,
     token: str | None,
     temp_dir: str,
     gcs_destination_path: str,
@@ -52,11 +54,27 @@ async def background_ingestion_task(
 
             # Wrap synchronous network operations in threadpool so we don't block the event loop
             try:
-                # 1. Download and extract from GitHub
-                logger.info(f"[{source_id}] Downloading repository {owner}/{repo}...")
-                extracted_dir = await run_in_threadpool(
-                    download_github_repo, owner, repo, temp_dir, token
-                )
+                # 1. Download and extract from the source platform
+                if "github.com" in source_value:
+                    owner, repo = parse_github_url(source_value)
+                    logger.info(f"[{source_id}] Downloading GitHub repository {owner}/{repo}...")
+                    extracted_dir = await run_in_threadpool(
+                        download_github_repo, owner, repo, temp_dir, token
+                    )
+                elif "gitlab.com" in source_value:
+                    full_path, repo = parse_gitlab_url(source_value)
+                    logger.info(f"[{source_id}] Downloading GitLab repository {full_path}...")
+                    extracted_dir = await run_in_threadpool(
+                        download_gitlab_repo, full_path, repo, temp_dir, token
+                    )
+                elif "bitbucket.org" in source_value:
+                    workspace, repo = parse_bitbucket_url(source_value)
+                    logger.info(f"[{source_id}] Downloading Bitbucket repository {workspace}/{repo}...")
+                    extracted_dir = await run_in_threadpool(
+                        download_bitbucket_repo, workspace, repo, temp_dir, token
+                    )
+                else:
+                    raise ValueError(f"Unsupported repository host in URL: {source_value}")
 
                 # 2. Upload to GCS
                 logger.info(
@@ -67,16 +85,16 @@ async def background_ingestion_task(
                 )
 
                 logger.info(
-                    f"[{source_id}] Successfully ingested {owner}/{repo}. {files_uploaded} files uploaded."
+                    f"[{source_id}] Successfully ingested {source_value}. {files_uploaded} files uploaded."
                 )
 
                 source.status = IngestionStatus.COMPLETED
                 await db.commit()
 
             except requests.exceptions.HTTPError as e:
-                logger.error(f"[{source_id}] GitHub API Error: {e}")
+                logger.error(f"[{source_id}] Repository API Error: {e}")
                 source.status = IngestionStatus.FAILED
-                source.error_message = f"GitHub API Error: {e}"
+                source.error_message = f"Repository API Error: {e}"
                 await db.commit()
             except Exception as e:
                 logger.exception(f"[{source_id}] An unexpected error occurred: {e}")
@@ -104,9 +122,24 @@ async def ingest_repository(
         )
 
         try:
-            owner, repo = parse_github_url(request.source_value)
+            if request.source_type == "github":
+                if "github.com" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'github'.")
+                _, repo = parse_github_url(request.source_value)
+            elif request.source_type == "gitlab":
+                if "gitlab.com" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'gitlab'.")
+                _, repo = parse_gitlab_url(request.source_value)
+            elif request.source_type == "bitbucket":
+                if "bitbucket.org" not in request.source_value:
+                    raise ValueError("Repository URL does not match source type 'bitbucket'.")
+                _, repo = parse_bitbucket_url(request.source_value)
+            else:
+                raise ValueError(
+                    f"Unsupported source type: {request.source_type}"
+                )
         except ValueError as e:
-            logger.error(f"Invalid GitHub URL: {e}")
+            logger.error(f"Invalid repository URL or source type mismatch: {e}")
             raise
 
         gcs_url = workspace_manager.get_workspace_path(request.workspace_id)
@@ -133,8 +166,7 @@ async def ingest_repository(
         background_tasks.add_task(
             background_ingestion_task,
             source_id=new_codebase_source.id,
-            repo=repo,
-            owner=owner,
+            source_value=request.source_value,
             token=request.token,
             temp_dir=temp_dir,
             gcs_destination_path=gcs_url,
@@ -207,49 +239,107 @@ async def get_sources(workspace_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/verify/repo-access", response_model=VerifyRepoResponse)
 async def verify_repo_access(request: VerifyRepoRequest, response: Response):
     """
-    Verifies if a GitHub repository is accessible.
+    Verifies if a repository is accessible.
     """
-    logger.info(f"Received verification request for GitHub URL: {request.source_value}")
+    logger.info(f"Received verification request for URL: {request.source_value}")
 
-    try:
-        owner, repo = parse_github_url(request.source_value)
-    except ValueError as e:
-        logger.error(f"Invalid GitHub URL: {e}")
+    url = ""
+    headers = {"Accept": "application/json"}
+    auth = None
+
+    if request.source_type == "github":
+        if "github.com" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'github'",
+                error_details="Expected a github.com URL"
+            )
+        try:
+            owner, repo = parse_github_url(request.source_value)
+        except ValueError as e:
+            logger.error(f"Invalid GitHub URL: {e}")
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error", message="Invalid GitHub URL", error_details=str(e)
+            )
+        url = f"https://api.github.com/repos/{owner}/{repo}"
+        headers["Accept"] = "application/vnd.github.v3+json"
+        if request.token:
+            headers["Authorization"] = f"token {request.token}"
+
+    elif request.source_type == "gitlab":
+        if "gitlab.com" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'gitlab'",
+                error_details="Expected a gitlab.com URL"
+            )
+        try:
+            full_path, repo = parse_gitlab_url(request.source_value)
+        except ValueError as e:
+            logger.error(f"Invalid GitLab URL: {e}")
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error", message="Invalid GitLab URL", error_details=str(e)
+            )
+        url_encoded_path = urllib.parse.quote_plus(full_path)
+        url = f"https://gitlab.com/api/v4/projects/{url_encoded_path}"
+        if request.token:
+            headers["PRIVATE-TOKEN"] = request.token
+
+    elif request.source_type == "bitbucket":
+        if "bitbucket.org" not in request.source_value:
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error",
+                message="Repository URL does not match source type 'bitbucket'",
+                error_details="Expected a bitbucket.org URL"
+            )
+        try:
+            workspace, repo = parse_bitbucket_url(request.source_value)
+        except ValueError as e:
+            logger.error(f"Invalid Bitbucket URL: {e}")
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return VerifyRepoResponse(
+                status="error", message="Invalid Bitbucket URL", error_details=str(e)
+            )
+        url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}"
+        if request.token:
+            headers["Authorization"] = f"Bearer {request.token}"
+
+    else:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return VerifyRepoResponse(
-            status="error", message="Invalid GitHub URL", error_details=str(e)
+            status="error",
+            message=f"Unsupported source type: {request.source_type}",
         )
-
-    url = f"https://api.github.com/repos/{owner}/{repo}"
-    headers = {"Accept": "application/vnd.github.v3+json"}
-
-    if request.token:
-        headers["Authorization"] = f"token {request.token}"
 
     try:
-        logger.info(f"Sending request to GitHub API for repository: {owner}/{repo}")
-        github_response = await run_in_threadpool(
-            requests.get, url, headers=headers, timeout=10
+        logger.info(f"Sending request to API: {url}")
+        api_response = await run_in_threadpool(
+            lambda: requests.get(url, headers=headers, auth=auth, timeout=10)
         )
 
-        if github_response.status_code == 200:
-            logger.info(f"Successfully verified access for {owner}/{repo}")
+        if api_response.status_code == 200:
+            logger.info("Successfully verified access.")
             return VerifyRepoResponse(message="Repository is accessible.")
 
         logger.error(
-            f"Failed to verify access for {owner}/{repo}: {github_response.status_code} {github_response.text}"
+            f"Failed to verify access: {api_response.status_code} {api_response.text}"
         )
-        response.status_code = github_response.status_code
+        response.status_code = api_response.status_code
 
         if request.token:
             return VerifyRepoResponse(
-                message="Repository access failed with the provided PAT token.",
-                error_details=github_response.text,
+                message="Repository access failed with the provided token.",
+                error_details=api_response.text,
             )
         else:
             return VerifyRepoResponse(
-                message="Repository not found or possibly private. Please try providing a PAT token.",
-                error_details=github_response.text,
+                message="Repository not found or possibly private. Please try providing an access token.",
+                error_details=api_response.text,
             )
 
     except Exception as e:
